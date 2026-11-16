@@ -91,6 +91,11 @@
     menuSettings: $('#menuSettings'),
     btnAnnShow: $('#btnAnnShow'),
     btnIntro: $('#btnIntro'),
+    btnKeys: $('#btnKeys'),
+    keys: $('#keys'),
+    keysList: $('#keysList'),
+    keysReset: $('#keysReset'),
+    keysClose: $('#keysClose'),
     annBar: $('#annBar'),
     annText: $('#annText'),
     annClose: $('#annClose'),
@@ -145,6 +150,7 @@
     adBlock: true,
     coverFilter: true,
     coverAsk: false,
+    keys: { ...window.Shortcuts.DEFAULTS },
     coverOverrides: {},
     coverKey: '',
     coverMode: 'shown',
@@ -269,7 +275,7 @@
   els.btnMenu.addEventListener('click', () => { if (els.menuPanel.hidden) { openMenu(); const f = [...els.menuPanel.querySelectorAll('button')].find((b) => b.offsetParent !== null); if (f && window.__lpTv) f.focus(); } else closeMenu(); });
   els.menuPanel.addEventListener('click', (e) => { // choices that open something close the menu; the on/off switches stay so several can be flipped
     const b = e.target.closest('button');
-    if (b && !/^(btnMenuSettings|btnAds|btnCover|btnRoman|btnAnnShow|btnIntro|btnAuto|btnSide|btnFsSide|btnStartup|btnTray|btnDiscord|btnClearTr)$/.test(b.id)) closeMenu();
+    if (b && !/^(btnMenuSettings|btnAds|btnCover|btnRoman|btnAnnShow|btnIntro|btnKeys|btnAuto|btnSide|btnFsSide|btnStartup|btnTray|btnDiscord|btnClearTr)$/.test(b.id)) closeMenu();
   });
   document.addEventListener('pointerdown', (e) => { if (!els.menuPanel.hidden && !e.target.closest('.menu-wrap')) closeMenu(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && closeMenu(true)) e.stopPropagation(); }, true);
@@ -1507,21 +1513,95 @@
   document.addEventListener('keydown', (event) => {
     const tag = (event.target && event.target.tagName) || '';
     if (tag === 'INPUT' && !/^(range|checkbox|radio|button)$/.test(event.target.type)) return; // typing in a text or search box
-    if (tag === 'TEXTAREA') return;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (event.ctrlKey && event.shiftKey && event.code === 'KeyD') {
       event.preventDefault();
       P.diagnose().then((n) => toast(typeof n === 'number' ? 'Troubleshooting info copied. Paste it into your message to me.' : String(n), 6000));
       return;
     }
-    if (event.code === 'Space') {
-      event.preventDefault();
-      P.cmd('toggle');
-    } else if (event.ctrlKey && event.code === 'ArrowRight') {
-      P.cmd('next');
-    } else if (event.ctrlKey && event.code === 'ArrowLeft') {
-      P.cmd('prev');
-    }
+    if (captureKey) return; // the shortcuts window is waiting for a key
+    if (!els.keys.hidden || (els.news && !els.news.hidden)) return;
+    const desktop = !!(window.api && window.api.desktop);
+    // Arrow keys on a slider move the slider itself; leave them to it.
+    if (tag === 'INPUT' && event.target.type === 'range' && /^Arrow/.test(event.code) && !event.ctrlKey) return;
+    // Phones and TVs only have Space and Ctrl+arrows (as before); the desktop app has the full, changeable list.
+    const action = desktop ? Shortcuts.resolve(state.keys, event)
+      : event.code === 'Space' ? 'play' : event.ctrlKey && event.code === 'ArrowRight' ? 'next' : event.ctrlKey && event.code === 'ArrowLeft' ? 'prev' : null;
+    if (!action) return;
+    if (event.repeat && !/^(seek|vol)/.test(action)) return;
+    // A focused button would also "click" on Space or Enter; the shortcut replaces that.
+    event.preventDefault();
+    runShortcut(action);
   });
+
+  /* ---------- keyboard shortcuts (desktop): one key per action, changeable ---------- */
+
+  let captureKey = null; // while the shortcuts window waits for a new key: the action it is for
+  let volBeforeMute = 0;
+  function runShortcut(action) {
+    const cur = state.snap && Number.isFinite(state.snap.cur) ? state.snap.cur : 0;
+    const dur = state.snap && state.snap.dur > 0 ? state.snap.dur : Infinity;
+    const setVol = (v) => {
+      els.vol.value = String(Math.max(0, Math.min(100, v)));
+      els.vol.dispatchEvent(new Event('input'));
+      els.vol.dispatchEvent(new Event('change'));
+      toast('Volume ' + els.vol.value + '%', 1200);
+    };
+    switch (action) {
+      case 'play': state.heldByUs = false; P.cmd('toggle'); break;
+      case 'next': P.cmd('next'); break;
+      case 'prev': els.btnPrev.click(); break;
+      case 'seekBack': P.cmd('seek', Math.max(0, cur - 5)); break;
+      case 'seekFwd': P.cmd('seek', Math.min(dur - 1, cur + 5)); break;
+      case 'volUp': setVol((parseInt(els.vol.value, 10) || 0) + 5); break;
+      case 'volDown': setVol((parseInt(els.vol.value, 10) || 0) - 5); break;
+      case 'mute': {
+        const v = parseInt(els.vol.value, 10) || 0;
+        if (v > 0) { volBeforeMute = v; setVol(0); } else setVol(volBeforeMute || 50);
+        break;
+      }
+      case 'shuffle': toggleShuffle(); break;
+      case 'repeat': cycleRepeat(); break;
+      case 'syncEarlier': if (!els.nudge.hidden) nudgeLyrics(-500); break;
+      case 'syncLater': if (!els.nudge.hidden) nudgeLyrics(500); break;
+      case 'fullscreen': window.api.fullscreen(); break;
+      default: break;
+    }
+  }
+
+  function paintKeys() {
+    els.keysList.textContent = '';
+    for (const a of Shortcuts.ACTIONS) {
+      const row = document.createElement('div'); row.className = 'keys-row';
+      const name = document.createElement('span'); name.textContent = a.label;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ghost small keys-key'; b.dataset.action = a.id;
+      b.textContent = captureKey === a.id ? 'Press a key…' : Shortcuts.pretty(state.keys[a.id]);
+      row.append(name, b); els.keysList.appendChild(row);
+    }
+  }
+  function saveKeys() { window.api.setSettings({ shortcuts: state.keys }); }
+  function closeKeys() { captureKey = null; els.keys.hidden = true; }
+  els.btnKeys.addEventListener('click', () => { captureKey = null; paintKeys(); els.keys.hidden = false; els.keysClose.focus(); });
+  els.keysClose.addEventListener('click', closeKeys);
+  els.keysReset.addEventListener('click', () => { state.keys = { ...Shortcuts.DEFAULTS }; captureKey = null; saveKeys(); paintKeys(); });
+  els.keysList.addEventListener('click', (e) => {
+    const b = e.target.closest('button.keys-key');
+    if (!b) return;
+    captureKey = b.dataset.action; paintKeys();
+  });
+  // Capture phase, so the key never reaches the normal shortcuts while a new one is being chosen.
+  document.addEventListener('keydown', (e) => {
+    if (els.keys.hidden) return;
+    if (!captureKey) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeKeys(); } return; }
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === 'Escape') { captureKey = null; paintKeys(); return; }
+    if (e.key === 'Backspace' || e.key === 'Delete') { state.keys = Shortcuts.assign(state.keys, captureKey, '').map; captureKey = null; saveKeys(); paintKeys(); return; }
+    const name = Shortcuts.keyName(e);
+    if (!name) return; // just a modifier so far
+    const { map, swapped } = Shortcuts.assign(state.keys, captureKey, name);
+    state.keys = map; captureKey = null; saveKeys(); paintKeys();
+    if (swapped) toast('That key was used by "' + Shortcuts.ACTIONS.find((x) => x.id === swapped).label + '", so the two swapped.', 4000);
+  }, true);
 
   /* ---------- drag and drop / paste ---------- */
 
@@ -1631,6 +1711,7 @@
     els.btnDiscord.textContent = state.discordPresence ? 'Discord status: on' : 'Discord status: off';
   }
   if (DESKTOP) {
+    els.btnKeys.hidden = false;
     els.btnStartup.hidden = false;
     els.btnTray.hidden = false;
     els.btnDiscord.hidden = false;
@@ -1843,6 +1924,7 @@
     state.adBlock = settings.adBlock !== false;
     // The cover check runs an 8 MB image model; a TV stick starts with it off (it can be turned on with the button).
     state.coverFilter = settings.coverFilter === undefined && window.__lpTv ? false : settings.coverFilter !== false;
+    state.keys = Shortcuts.merge(settings.shortcuts);
     state.coverAsk = settings.coverAsk === undefined ? (settings.coverFilter === undefined && !!window.__lpTv) : settings.coverAsk === true;
     state.coverOverrides = settings.coverOverrides && typeof settings.coverOverrides === 'object' ? settings.coverOverrides : {};
     applyCoverFilterButton();

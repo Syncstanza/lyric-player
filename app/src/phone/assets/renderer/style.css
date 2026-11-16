@@ -595,3 +595,11 @@ html.intro-done #app{animation:none;opacity:1}
 #splash .by{font-size:clamp(10px,2.8vw,14px);letter-spacing:.3em;white-space:nowrap}
 #splash .by img{width:30px;height:30px}
 #splash .orb{max-width:90vw;max-height:90vw}
+
+/* keyboard shortcuts window */
+.keys-hint { margin: -6px 0 0; font-size: 13px; color: var(--dim); }
+.keys-list { display: flex; flex-direction: column; gap: 6px; }
+.keys-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.keys-row span { font-size: 14px; }
+.keys-key { min-width: 96px; text-align: center; font-variant-numeric: tabular-nums; }
+.keys-actions { display: flex; justify-content: space-between; gap: 10px; }

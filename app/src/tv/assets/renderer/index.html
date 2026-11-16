@@ -42,6 +42,7 @@
               <label class="menu-row" id="rowLang" hidden><span>Language</span><select id="selLang" aria-label="Language"></select></label>
               <label class="menu-row" id="rowTrans" hidden><span>Translate lyrics</span><select id="selTrans" aria-label="Translate lyrics"></select></label>
               <button id="btnClearTr" type="button" title="Delete the saved translations from this device" hidden>Clear translations</button>
+              <button id="btnKeys" type="button" title="Choose your own keys for play, next, volume and more" hidden>Keyboard shortcuts</button>
               <button id="btnIntro" type="button" title="The short animation when the app opens">Intro screen: on</button>
               <button id="btnAnnShow" type="button" title="Show a small bar at the top when there is a new announcement">Show announcements: on</button>
               <button id="btnFsSide" type="button" title="Which corner the full screen button sits in when the phone is sideways (left-handed? pick left)">Fullscreen button: right</button>
@@ -202,6 +203,14 @@
         <button id="newsClose" class="solid" type="button">Got it</button>
       </div>
     </div>
+    <div id="keys" class="news" role="dialog" aria-modal="true" aria-labelledby="keysTitle" hidden>
+      <div class="news-card">
+        <h2 id="keysTitle">Keyboard shortcuts</h2>
+        <p class="keys-hint">Click a key, then press the new one. Backspace clears it. Esc cancels.</p>
+        <div id="keysList" class="news-body keys-list"></div>
+        <div class="keys-actions"><button id="keysReset" class="ghost" type="button">Reset to defaults</button><button id="keysClose" class="solid" type="button">Done</button></div>
+      </div>
+    </div>
     <div id="toast" class="toast" role="status" hidden></div>
   </div>
 
@@ -212,6 +221,7 @@
   <script src="coverfilter.js"></script>
   <script src="whatsnew.js"></script>
   <script src="i18n.js"></script>
+  <script src="shortcuts.js"></script>
   <script src="quran.js"></script>
   <script src="android-core.js"></script>
   <script src="tv.js"></script>

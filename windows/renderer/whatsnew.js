@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 46,
+    title: 'Keyboard shortcuts',
+    items: [
+      { text: 'One-key shortcuts you can change: Menu > Settings > Keyboard shortcuts. Defaults: Space play/pause, N next, P previous, ← → seek 5 seconds, ↑ ↓ volume, M mute, S shuffle, R repeat, [ ] lyrics sync, F fullscreen. Ctrl + ← / → still skip songs.', desktop: true },
+    ],
+  },
+  {
     id: 45,
     title: 'Cover filter: ask me',
     items: [
