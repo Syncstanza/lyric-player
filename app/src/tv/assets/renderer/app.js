@@ -1480,7 +1480,7 @@
   }
   function skipFx(dir) { state.skipDir = dir; fx(dir === 'prev' ? els.btnPrev : els.btnNext, 'skipnudge', 450); }
 
-  const thread = { drawn: 0, raf: 0, amp: 0, last: 0, w: 0, h: 0, ctx: null, colors: null, cad: null, cadFor: null, n: 0 };
+  const thread = { drawn: 0, raf: 0, amp: 0, phase: 0, last: 0, w: 0, h: 0, ctx: null, colors: null, n: 0 };
   function threadColors() {
     const cs = getComputedStyle(document.documentElement);
     const c = (k, d) => (cs.getPropertyValue(k) || d).trim() || d;
@@ -1504,14 +1504,13 @@
     let cur = s ? (s.cur || 0) + (playing ? (now - (state.snapAt || now)) / 1000 : 0) : 0;
     if (dur) cur = Math.min(cur, dur);
     const head = state.seeking ? (parseFloat(els.seek.value) || 0) / (parseFloat(els.seek.max) || 1) : (dur ? cur / dur : 0);
-    const data = state.lyricsData;
-    if (data !== thread.cadFor) { thread.cadFor = data; thread.cad = data && data.synced ? Fluid.makeCadence(data.lines) : null; }
-    const c = thread.cad ? thread.cad(cur + 0.15) : Fluid.IDLE;
     const full = state.anim === 'full';
     const dt = Math.min(0.1, (ts - (thread.last || ts)) / 1000); thread.last = ts;
-    thread.amp += ((full && playing ? 1 : 0) - thread.amp) * Math.min(1, dt * 6); // eases in on play and flat on pause
+    thread.amp += ((full && playing ? 1 : 0) - thread.amp) * Math.min(1, dt * 4); // eases in on play and settles flat on pause
     if (thread.amp < 0.01) thread.amp = 0;
-    Fluid.drawThread(thread.ctx, { w, h, head, t: now / 1000, amp: thread.amp, energy: c.energy, pulse: full ? c.pulse : 0, colors: thread.colors });
+    const b = Fluid.breath(now / 1000); // a slow, loose swell (not tied to the lyrics)
+    thread.phase += b.speed * dt; // the phase only grows, so the ripples always flow left to right
+    Fluid.drawThread(thread.ctx, { w, h, head, phase: thread.phase, amp: thread.amp, energy: b.energy, colors: thread.colors });
     if (full && (playing || thread.amp > 0)) thread.raf = requestAnimationFrame(threadFrame);
   }
   function threadKick() { if (!thread.raf && state.anim !== 'off') thread.raf = requestAnimationFrame(threadFrame); }

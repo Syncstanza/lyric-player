@@ -5,7 +5,7 @@ window.__whatsnew = [
     id: 49,
     title: 'Smoother, livelier screen',
     items: [
-      { text: 'The progress line is now a living thread: it ripples around the dot, swells with every new lyric line and moves faster when the singing is fast. It goes flat and calm when you pause.' },
+      { text: 'The progress line is now a living thread: a slow, gentle ripple flows left to right around the dot, and it goes flat and calm when you pause.' },
       { text: 'Small animations: the play button turns into pause, skip buttons nudge and the song title slides in, covers fade in, the menu opens out of its button, shuffle and repeat flip, and the Sync bar slides up.' },
       { text: 'Choose how much moves in Menu > Settings > Animations: full, light (simple, TV default) or off.' },
     ],

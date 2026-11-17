@@ -2,41 +2,40 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const F = require('../renderer/fluid.js');
 
-const song = (gaps, text) => gaps.reduce((acc, g) => { const t = acc.length ? acc[acc.length - 1].time + acc[acc.length - 1].gap : 0; acc.push({ time: t, gap: g, text }); return acc; }, []);
-
-test('fast, dense singing is livelier than slow, sparse singing', () => {
-  const lines = [...song([1.5, 1.5, 1.5, 1.5], 'a quick line of words here'), ...song([6, 6, 6, 6], 'slow line')].map((l, i, a) => ({ time: i < 4 ? i * 1.5 : 6 + (i - 4) * 6, text: l.text }));
-  const at = F.makeCadence(lines);
-  const fast = at(3.2).energy, slow = at(6 + 6 * 2 + 0.3).energy;
-  assert.ok(fast > slow, `${fast} should be above ${slow}`);
+test('the breathing is slow, stays in a calm range and never jumps', () => {
+  let prev = F.breath(0);
+  for (let t = 0.033; t < 120; t += 0.033) {
+    const b = F.breath(t);
+    assert.ok(b.energy >= 0.2 && b.energy <= 0.8, `energy ${b.energy}`);
+    assert.ok(b.speed > 2 && b.speed < 5, `speed ${b.speed}`);
+    assert.ok(Math.abs(b.energy - prev.energy) < 0.02, 'no sudden change between frames');
+    prev = b;
+  }
 });
 
-test('a new lyric line gives a swell that fades away', () => {
-  const lines = [0, 4, 8, 12].map((t) => ({ time: t, text: 'some words to sing along' }));
-  const at = F.makeCadence(lines);
-  assert.ok(at(4.0).pulse > 0.95);
-  assert.ok(at(4.5).pulse < at(4.1).pulse);
-  assert.ok(at(7.5).pulse < 0.05);
+test('it does not repeat exactly (two different slow rhythms)', () => {
+  assert.notEqual(F.breath(1).energy.toFixed(4), F.breath(1 + 9).energy.toFixed(4));
 });
 
-test('before the first line it is calm, and with no timed lyrics it uses a steady default', () => {
-  const at = F.makeCadence([{ time: 5, text: 'first' }, { time: 9, text: 'second' }]);
-  assert.ok(at(1).energy < 0.3);
-  assert.deepEqual(F.makeCadence([])(10), F.IDLE);
-  assert.deepEqual(F.makeCadence(null)(10), F.IDLE);
-  assert.deepEqual(F.makeCadence([{ time: 1, text: 'only one' }])(10), F.IDLE);
+test('ripples travel from left to right', () => {
+  const base = { h: 36, hx: 200, amp: 1, energy: 0.6 };
+  // follow one crest (the one near x = 230) as the phase grows
+  const near = (phase, from, to) => { let best = -Infinity, bx = from; for (let x = from; x <= to; x += 0.25) { const y = 18 - F.waveY(x, { ...base, phase }); if (y > best) { best = y; bx = x; } } return bx; };
+  let x = near(0.3, 215, 245);
+  const path = [x];
+  for (const ph of [0.6, 0.9, 1.2, 1.5]) { x = near(ph, x - 3, x + 12); path.push(x); }
+  for (let i = 1; i < path.length; i++) assert.ok(path[i] > path[i - 1], `crest should move right: ${path.join(', ')}`);
 });
 
-test('a long instrumental break settles the thread', () => {
-  const lines = [{ time: 0, text: 'sing sing sing' }, { time: 2, text: 'sing sing sing' }, { time: 40, text: 'back again' }];
-  const at = F.makeCadence(lines);
-  assert.ok(at(30).energy < at(2.5).energy);
-});
-
-test('energy and pulse always stay inside 0..1', () => {
-  const lines = Array.from({ length: 50 }, (_, i) => ({ time: i * (i % 3 + 0.3), text: 'x'.repeat((i * 7) % 90 + 1) })).sort((a, b) => a.time - b.time);
-  const at = F.makeCadence(lines);
-  for (let t = 0; t < 120; t += 0.37) { const r = at(t); assert.ok(r.energy >= 0 && r.energy <= 1 && r.pulse >= 0 && r.pulse <= 1, JSON.stringify(r)); }
+test('paused means perfectly flat, and the dot is exactly on the thread', () => {
+  const calls = [];
+  const ctx = new Proxy({}, { get: (_t, k) => (k === 'arc' ? (...a) => calls.push(a) : () => {}), set: () => true });
+  const colors = { done: '#c08a5e', rest: '#333', dot: '#e0b48a' };
+  F.drawThread(ctx, { w: 400, h: 36, head: 0.5, phase: 1, amp: 0, energy: 0.6, colors });
+  assert.equal(calls[1][1], 18);
+  F.drawThread(ctx, { w: 400, h: 36, head: 0.5, phase: 1, amp: 1, energy: 0.6, colors });
+  assert.ok(Math.abs(calls[3][0] - 200) < 8);
+  assert.notEqual(calls[3][1], 18); // playing: the dot rides the wave
 });
 
 test('animation level: saved choice wins, TVs default to light, others to full', () => {
@@ -46,14 +45,4 @@ test('animation level: saved choice wins, TVs default to light, others to full',
   assert.equal(F.levelFrom('nonsense', false), 'full');
   assert.equal(F.NEXT_LEVEL.full, 'light');
   assert.equal(F.NEXT_LEVEL.off, 'full');
-});
-
-test('drawing the thread works on a fake canvas and puts the dot on the line', () => {
-  const calls = [];
-  const ctx = new Proxy({}, { get: (_t, k) => (k === 'arc' ? (...a) => calls.push(a) : () => {}), set: () => true });
-  F.drawThread(ctx, { w: 400, h: 36, head: 0.5, t: 1, amp: 1, energy: 0.8, pulse: 0.3, colors: { done: '#c08a5e', rest: '#333', dot: '#e0b48a' } });
-  assert.equal(calls.length, 2);
-  assert.ok(Math.abs(calls[0][0] - 200) < 8);
-  F.drawThread(ctx, { w: 400, h: 36, head: 0.5, t: 1, amp: 0, energy: 0.8, pulse: 0, colors: { done: '#c08a5e', rest: '#333', dot: '#e0b48a' } });
-  assert.equal(calls[2][1], 18); // paused: perfectly flat, dot on the middle line
 });
