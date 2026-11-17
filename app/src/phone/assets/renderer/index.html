@@ -110,7 +110,7 @@
     <footer class="dock">
       <div class="seek-row">
         <span id="cur" class="time">0:00</span>
-        <div class="seek-wrap"><canvas id="thread" aria-hidden="true"></canvas><input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Seek"></div>
+        <div class="seek-wrap"><canvas id="thread" aria-hidden="true"></canvas><div id="seekTip" class="seek-tip" aria-hidden="true">0:00</div><input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Seek"></div>
         <span id="dur" class="time">0:00</span>
       </div>
       <div class="controls">
@@ -121,7 +121,7 @@
         </div>
         <div class="transport">
           <button id="btnShuffle" class="icon" type="button" aria-label="Shuffle" title="Shuffle">
-            <svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+            <svg viewBox="0 0 24 24"><path class="sh1" pathLength="1" d="M16 3h5v5M4 20 21 3"/><path class="sh2" pathLength="1" d="M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
           </button>
           <button id="btnPrev" class="icon" type="button" aria-label="Previous" title="Previous">
             <svg viewBox="0 0 24 24"><path class="fill" d="M19 5v14L8 12zM6 5v14"/></svg>

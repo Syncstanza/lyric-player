@@ -15,15 +15,18 @@
     return { energy: clamp(e, 0, 1), speed: 3 + 1.6 * e };
   }
 
+  // Moves a value toward its target a little each frame, the same at any frame rate (a soft, springy follow).
+  function smooth(cur, target, dt, rate) { return cur + (target - cur) * (1 - Math.exp(-rate * dt)); }
+
   const SIGMA = 46, FREQ = 0.19;
   // Height of the thread at x. The phase only grows. The crests travel toward lower x; on the screen this is the direction
   // that looks left to right (chosen by eye by the owner from a side-by-side clip), so do not flip the sign back.
   function waveY(x, p) {
-    const cy = p.h / 2, amp = (3 + 9 * p.energy) * p.amp;
+    const cy = p.h / 2, amp = (3 + 9 * p.energy) * Math.max(p.amp, 0.55 * (p.grab || 0)) * (1 + 0.25 * (p.grab || 0));
     return cy + amp * Math.exp(-Math.pow((x - p.hx) / SIGMA, 2)) * Math.sin((x - p.hx) * FREQ + p.phase);
   }
 
-  // p: { w, h, head (0..1), phase, amp (0..1: playing amount), energy, colors {done, rest, dot} }
+  // p: { w, h, head (0..1), phase, amp (0..1: playing amount), energy, grab (0..1: being dragged), rip (0..1: a touch ripple, or null), colors {done, rest, dot} }
   function drawThread(ctx, p) {
     const { w, h } = p, pad = 7;
     const x0 = pad, x1 = w - pad;
@@ -35,9 +38,14 @@
     ctx.strokeStyle = p.colors.rest; path(Math.max(x0, hx - 1), x1); // ahead of the dot
     ctx.strokeStyle = p.colors.done; ctx.lineWidth = 4.5; if (hx > x0 + 1) path(x0, hx); // behind the dot
     const hy = yAt(hx); // the dot sits on the thread
+    const g = p.grab || 0;
+    if (p.rip != null && p.rip >= 0 && p.rip < 1) { // a ring that opens from the dot where you pressed
+      ctx.strokeStyle = p.colors.dot; ctx.lineWidth = 2; ctx.globalAlpha = 0.7 * (1 - p.rip);
+      ctx.beginPath(); ctx.arc(hx, hy, 8 + 30 * (1 - Math.pow(1 - p.rip, 3)), 0, TWO_PI); ctx.stroke(); ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = p.colors.dot;
-    ctx.globalAlpha = 0.26; ctx.beginPath(); ctx.arc(hx, hy, 10, 0, TWO_PI); ctx.fill();
-    ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(hx, hy, 6.5, 0, TWO_PI); ctx.fill();
+    ctx.globalAlpha = 0.26 + 0.2 * g; ctx.beginPath(); ctx.arc(hx, hy, 10 + 8 * g, 0, TWO_PI); ctx.fill();
+    ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(hx, hy, 6.5 + 3 * g, 0, TWO_PI); ctx.fill();
   }
 
   // 'full' | 'light' | 'off'. TVs start on light.
@@ -46,5 +54,5 @@
   }
   const NEXT_LEVEL = { full: 'light', light: 'off', off: 'full' };
 
-  return { breath, waveY, drawThread, levelFrom, NEXT_LEVEL };
+  return { breath, smooth, waveY, drawThread, levelFrom, NEXT_LEVEL };
 });

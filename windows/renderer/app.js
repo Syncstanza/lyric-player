@@ -49,6 +49,7 @@
     repeatOne: $('#repeatOne'),
     iconPlay: $('#iconPlay'),
     thread: $('#thread'),
+    seekTip: $('#seekTip'),
     btnAnim: $('#btnAnim'),
     overlay: $('#overlay'),
     overlayMsg: $('#overlayMsg'),
@@ -732,6 +733,7 @@
     if (state.paintedPlaying !== playing) { // only touch the buttons when it changes
       state.paintedPlaying = playing;
       els.btnPlay.classList.toggle('is-playing', playing); // the icon morphs between play and pause (CSS)
+      fx(els.btnPlay, 'ring', 700); // and a ring opens from the button
       els.iconPlay.firstElementChild.setAttribute('d', playing ? PAUSE_D : PLAY_D); // (the same shapes, for a browser without the CSS morph)
       els.btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
     }
@@ -1463,7 +1465,7 @@
   }
   function skipFx(dir) { state.skipDir = dir; fx(dir === 'prev' ? els.btnPrev : els.btnNext, 'skipnudge', 450); }
 
-  const thread = { drawn: 0, raf: 0, amp: 0, phase: 0, last: 0, w: 0, h: 0, ctx: null, colors: null, n: 0 };
+  const thread = { glideUntil: 0, drawn: 0, raf: 0, head: 0, grab: 0, ripAt: 0, amp: 0, phase: 0, last: 0, w: 0, h: 0, ctx: null, colors: null, n: 0 };
   function threadColors() {
     const cs = getComputedStyle(document.documentElement);
     const c = (k, d) => (cs.getPropertyValue(k) || d).trim() || d;
@@ -1471,7 +1473,7 @@
   }
   function threadFrame(ts) {
     thread.raf = 0;
-    if (thread.drawn && ts - thread.drawn < 30 && state.anim === 'full') { thread.raf = requestAnimationFrame(threadFrame); return; } // about 30 frames a second
+    if (thread.drawn && ts - thread.drawn < 30 && state.anim === 'full' && !state.seeking && ts > (thread.hiUntil || 0)) { thread.raf = requestAnimationFrame(threadFrame); return; } // about 30 frames a second
     thread.drawn = ts;
     const cv = els.thread;
     if (state.anim === 'off' || !cv || document.hidden) return;
@@ -1486,15 +1488,33 @@
     const now = performance.now();
     let cur = s ? (s.cur || 0) + (playing ? (now - (state.snapAt || now)) / 1000 : 0) : 0;
     if (dur) cur = Math.min(cur, dur);
-    const head = state.seeking ? (parseFloat(els.seek.value) || 0) / (parseFloat(els.seek.max) || 1) : (dur ? cur / dur : 0);
     const full = state.anim === 'full';
     const dt = Math.min(0.1, (ts - (thread.last || ts)) / 1000); thread.last = ts;
+    const seekMax = parseFloat(els.seek.max) || 1;
+    const target = state.seeking ? (parseFloat(els.seek.value) || 0) / seekMax : (dur ? cur / dur : 0);
+    // While dragging (and when you let go) the dot glides after your finger instead of jumping.
+    const gap = Math.abs(target - thread.head);
+    thread.head = full && (state.seeking || now < thread.glideUntil) && gap > 0.0005 ? Fluid.smooth(thread.head, target, dt || 0.016, state.seeking ? 11 : 7) : target;
+    thread.grab = full ? Fluid.smooth(thread.grab, state.seeking ? 1 : 0, dt || 0.016, 12) : (state.seeking ? 1 : 0);
+    if (thread.grab < 0.01) thread.grab = 0;
     thread.amp += ((full && playing ? 1 : 0) - thread.amp) * Math.min(1, dt * 4); // eases in on play and settles flat on pause
     if (thread.amp < 0.01) thread.amp = 0;
     const b = Fluid.breath(now / 1000); // a slow, loose swell (not tied to the lyrics)
     thread.phase += b.speed * dt; // the phase only grows, so the ripples always keep one direction
-    Fluid.drawThread(thread.ctx, { w, h, head, phase: thread.phase, amp: thread.amp, energy: b.energy, colors: thread.colors });
-    if (full && (playing || thread.amp > 0)) thread.raf = requestAnimationFrame(threadFrame);
+    const rip = thread.ripAt && full ? (now - thread.ripAt) / 650 : null;
+    if (rip != null && rip >= 1) thread.ripAt = 0;
+    Fluid.drawThread(thread.ctx, { w, h, head: thread.head, phase: thread.phase, amp: thread.amp, energy: b.energy, grab: thread.grab, rip, colors: thread.colors });
+    // The time bubble above the dot while dragging.
+    const tip = els.seekTip;
+    if (thread.grab > 0.01) {
+      const hxPx = 7 + (w - 14) * Math.max(0, Math.min(1, thread.head));
+      const txt = L.formatTime(thread.head * (dur || seekMax));
+      if (tip.textContent !== txt) tip.textContent = txt;
+      tip.style.opacity = String(thread.grab);
+      tip.style.transform = `translate(${hxPx.toFixed(1)}px, ${(-30 - 6 * thread.grab).toFixed(1)}px) translateX(-50%) scale(${(0.85 + 0.15 * thread.grab).toFixed(3)})`;
+    } else if (tip.style.opacity !== '0') tip.style.opacity = '0';
+    const busy = playing || thread.amp > 0 || state.seeking || thread.grab > 0 || Math.abs(target - thread.head) > 0.0005 || thread.ripAt;
+    if (full && busy) thread.raf = requestAnimationFrame(threadFrame);
   }
   function threadKick() { if (!thread.raf && state.anim !== 'off') thread.raf = requestAnimationFrame(threadFrame); }
   document.addEventListener('visibilitychange', threadKick);
@@ -1512,7 +1532,7 @@
   els.artImg.addEventListener('load', () => fx(els.artImg, 'art-in', 700));
 
   function toggleShuffle() {
-    fx(els.btnShuffle, 'flip', 600);
+    fx(els.btnShuffle, 'shuffling', 700);
     state.shuffle = !state.shuffle;
     paintShuffle();
     P.cmd('setShuffle', state.shuffle);
@@ -1521,7 +1541,7 @@
   }
 
   function cycleRepeat() {
-    fx(els.btnRepeat, 'flip', 600);
+    fx(els.btnRepeat, 'repeating', 700);
     state.repeat = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
     paintRepeat();
     P.cmd('setRepeat', state.repeat);
@@ -1570,14 +1590,18 @@
   window.addEventListener('mousemove', wakeControls);
   window.addEventListener('keydown', wakeControls);
 
-  els.seek.addEventListener('pointerdown', () => (state.seeking = true));
+  els.seek.addEventListener('pointerdown', () => { state.seeking = true; thread.ripAt = performance.now(); threadKick(); });
+  els.seek.addEventListener('input', () => threadKick());
   els.seek.addEventListener('input', () => {
     els.cur.textContent = L.formatTime(els.seek.value);
     setRangeFill(els.seek);
   });
   els.seek.addEventListener('change', () => {
-    P.cmd('seek', parseFloat(els.seek.value));
+    const to = parseFloat(els.seek.value) || 0;
+    P.cmd('seek', to);
+    if (state.snap) { state.snap = Object.assign({}, state.snap, { cur: to }); state.snapAt = performance.now(); } // so the dot stays put instead of hopping back until the player answers
     state.seeking = false;
+    thread.glideUntil = performance.now() + 900; thread.hiUntil = performance.now() + 1000; threadKick(); // the dot settles smoothly where the song really is
   });
 
   els.vol.addEventListener('input', () => {

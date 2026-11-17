@@ -625,7 +625,27 @@ html[data-anim="full"] #seek::-webkit-slider-thumb, html[data-anim="light"] #see
 #btnNext.skipnudge { animation: skipnudge-next 0.4s ease; }
 #btnPrev.skipnudge { animation: skipnudge-prev 0.4s ease; }
 @keyframes flipx { to { transform: rotateY(360deg); } }
-#btnShuffle.flip, #btnRepeat.flip { animation: flipx 0.5s ease; }
+/* shuffle: the two arrows draw themselves again and swap places; repeat: the loop turns once */
+@keyframes sh-draw { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+@keyframes sh-a { 0% { transform: translate(-2.5px, 2.5px); } 100% { transform: none; } }
+@keyframes sh-b { 0% { transform: translate(2.5px, -2.5px); } 100% { transform: none; } }
+#btnShuffle.shuffling .sh1 { animation: sh-draw 0.45s ease-out both, sh-a 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
+#btnShuffle.shuffling .sh2 { animation: sh-draw 0.45s ease-out 0.12s both, sh-b 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) 0.12s; }
+@keyframes spin-once { to { transform: rotate(360deg); } }
+#btnRepeat.repeating svg { animation: spin-once 0.6s cubic-bezier(0.3, 0.7, 0.2, 1); }
+#btnRepeat.repeating .badge { animation: badge-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) 0.2s; }
+@keyframes badge-pop { 0% { transform: scale(0.4); } 100% { transform: none; } }
+/* play / pause: a ring opens from the button, and it glows while playing */
+#btnPlay { position: relative; isolation: isolate; }
+#btnPlay::before { content: ""; position: absolute; inset: -12px; border-radius: 50%; z-index: -1; pointer-events: none; opacity: 0; transition: opacity 0.45s;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 60%, transparent) 0, transparent 68%); }
+#btnPlay.is-playing::before { opacity: 0.8; }
+#btnPlay::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent-2); opacity: 0; pointer-events: none; }
+@keyframes btn-ring { from { opacity: 0.85; transform: scale(1); } to { opacity: 0; transform: scale(1.9); } }
+#btnPlay.ring::after { animation: btn-ring 0.6s ease-out; }
+/* the time bubble above the dot while dragging the progress line */
+.seek-tip { position: absolute; left: 0; top: 50%; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-variant-numeric: tabular-nums; background: #241b15; color: var(--text); border: 1px solid var(--line); opacity: 0; pointer-events: none; white-space: nowrap; z-index: 2; }
+html[data-anim="off"] .seek-tip, html[data-anim="light"] .seek-tip { display: none; }
 @keyframes swap-next { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
 @keyframes swap-prev { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
 .meta.swap-next { animation: swap-next 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -650,6 +670,6 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.35); }
 
 /* light: only simple fades; off: nothing moves */
 html[data-anim="light"] .controls .icon, html[data-anim="light"] #btnPlay .fill { transition: none; }
-html[data-anim="light"] #btnNext.skipnudge, html[data-anim="light"] #btnPrev.skipnudge, html[data-anim="light"] #btnShuffle.flip, html[data-anim="light"] #btnRepeat.flip, html[data-anim="light"] .meta.swap-next, html[data-anim="light"] .meta.swap-prev { animation: none; }
+html[data-anim="light"] #btnNext.skipnudge, html[data-anim="light"] #btnPrev.skipnudge, html[data-anim="light"] #btnShuffle.shuffling .sh1, html[data-anim="light"] #btnShuffle.shuffling .sh2, html[data-anim="light"] #btnRepeat.repeating svg, html[data-anim="light"] #btnPlay.ring::after, html[data-anim="light"] .meta.swap-next, html[data-anim="light"] .meta.swap-prev { animation: none; }
 html[data-anim="light"] .line.active { text-shadow: none; }
 html[data-anim="off"] #app *, html[data-anim="off"] #app *::before, html[data-anim="off"] #app *::after { animation: none !important; transition: none !important; }
