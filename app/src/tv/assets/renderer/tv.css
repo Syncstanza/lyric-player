@@ -70,3 +70,8 @@ input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; margin-to
 .cover-ask button { font-size: 17px; padding: 8px 18px; }
 .cover-ask button:focus { outline: 4px solid var(--accent-2); outline-offset: 3px; }
 #app.immersive.idle .cover-ask { opacity: 0; pointer-events: none; }
+
+/* TV sticks: a hidden cover is a flat dark tile (a 34px blur of a big picture is one of the slowest things to draw), and a smaller shadow */
+.album-box { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); }
+.album-box.cover-hidden { background: #17110d; }
+.album-box.cover-hidden .art-img { filter: none; transform: none; visibility: hidden; }

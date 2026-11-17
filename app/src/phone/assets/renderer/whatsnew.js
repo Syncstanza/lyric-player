@@ -2,6 +2,14 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 48,
+    title: 'Faster on phones and TVs',
+    items: [
+      { text: 'Album covers are downloaded at the size they are shown, so they load faster and use less memory.', mobile: true },
+      { text: 'Lighter to draw: blurred-glass backgrounds are gone on phones and TVs, and a hidden cover on TV is a flat dark tile instead of a heavy blur.', mobile: true },
+    ],
+  },
+  {
     id: 47,
     title: 'Lighter on your computer',
     items: [

@@ -1025,6 +1025,11 @@
     return out.filter((u, i) => u && u !== url && out.indexOf(u) === i);
   }
 
+  // Phones and TVs show the cover small: ask for a picture that size (downloads and decodes faster, less memory).
+  function scaledArt(url) {
+    const n = window.__lpTv ? 640 : window.__lpAndroid ? 440 : 0;
+    return n && /=w\d+-h\d+/.test(url) ? url.replace(/=w\d+-h\d+/, `=w${n}-h${n}`) : url;
+  }
   function setArt(url) {
     state.artUrl = url;
     if (window.__lpTv) {
@@ -1041,7 +1046,7 @@
     }
     if (url) {
       artFallbacks = artChain(url);
-      els.artImg.src = url;
+      els.artImg.src = scaledArt(url);
       els.artImg.hidden = false;
       els.artEmpty.hidden = true;
     } else {
