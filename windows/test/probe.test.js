@@ -20,7 +20,7 @@ function fakePage(url, items) {
     location: { href: url },
     navigator: { mediaSession: { metadata: { title: 'Song', artist: 'Band', album: 'A', artwork: [{ src: 'https://x/y=w60-h60' }] } } },
     window: {},
-    document: { querySelector: (s) => (s === 'ytmusic-player-bar' ? bar : null), querySelectorAll: (s) => all[s] || [] },
+    document: { querySelector: (s) => (s === 'ytmusic-player-bar' ? bar : null), querySelectorAll: (s) => all[s] || [], getElementsByTagName: (s) => all[s] || [] },
   };
 }
 
@@ -55,4 +55,19 @@ test('probe reuses the queue walk while nothing changed, and redoes it when the 
   assert.equal(again.nextMeta.id, 'bbbbbbbbbbb');
   page.location.href = 'https://music.youtube.com/watch?v=bbbbbbbbbbb&list=PL1';
   assert.equal(run().nextMeta.id, 'ccccccccccc');
+});
+
+test('later looks call the function already in the page instead of sending the whole probe again', () => {
+  const src2 = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  const s2 = src2.indexOf('const PICK_VIDEO');
+  const { probeScript: full, probeCall } = vm.runInNewContext(src2.slice(s2, src2.indexOf('async function pollYt')) + '\n({ probeScript, probeCall })');
+  const page = fakePage('https://music.youtube.com/watch?v=aaaaaaaaaaa', []);
+  vm.createContext(page);
+  assert.equal(vm.runInContext(probeCall(null, false, ''), page), '__noprobe'); // not installed yet
+  const first = vm.runInContext(full(null, false, ''), page);
+  assert.equal(first.videoId, 'aaaaaaaaaaa');
+  const again = vm.runInContext(probeCall(null, false, ''), page);
+  assert.equal(again.videoId, 'aaaaaaaaaaa');
+  assert.ok(probeCall(null, false, '').length < 200); // tiny compared with the full probe
+  assert.ok(full(null, false, '').length > 2000);
 });

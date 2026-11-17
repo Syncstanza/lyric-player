@@ -290,7 +290,7 @@ function createYtView() {
 const PICK_VIDEO = `const pickVideo = () => { const a = [...document.querySelectorAll('video')]; return a.find((v) => v.readyState > 0 && !v.paused) || a.find((v) => v.readyState > 0) || a[0] || null; };`;
 
 // Runs inside the YouTube Music page. Returns plain JSON.
-const probeScript = (desiredVolume, blockAds, wantId) => `(() => {
+const PROBE_FN = `((desiredVolume, blockAds, wantId) => {
   ${PICK_VIDEO}
   try {
     const q = (s) => document.querySelector(s);
@@ -308,7 +308,7 @@ const probeScript = (desiredVolume, blockAds, wantId) => `(() => {
     if (art) art = art.replace(/=w\\d+-h\\d+[^"']*$/, '=w800-h800');
     const adNow = !!q('.ad-showing, .ad-interrupting');
     window.__lpAdNow = adNow;
-    if (adNow && ${blockAds ? 'true' : 'false'}) {
+    if (adNow && blockAds) {
       if (v) {
         if (!window.__lpMuted) { window.__lpMuted = true; window.__lpWasMuted = v.muted; }
         v.muted = true;
@@ -323,12 +323,12 @@ const probeScript = (desiredVolume, blockAds, wantId) => `(() => {
       window.__lpMuted = false;
       if (v) { v.muted = !!window.__lpWasMuted; v.playbackRate = 1; }
     }
-    const want = ${desiredVolume == null ? 'null' : Number(desiredVolume)};
+    const want = desiredVolume == null ? null : Number(desiredVolume);
     const vid = new URL(location.href).searchParams.get('v') || '';
     // YouTube resets the volume to 100 now and then (at the start of a song and sometimes mid-song), which is heard as a
     // spike. So the page's own volume setter is blocked while a volume is wanted (only this app sets it), and the level
     // is put back at once on the media events and, as a safety net, on every look if it still differs.
-    window.__lpWant = ${desiredVolume == null ? 'null' : Number(desiredVolume)};
+    window.__lpWant = want;
     if (!window.__lpGuard && typeof HTMLMediaElement !== 'undefined' && typeof document.addEventListener === 'function') {
       window.__lpGuard = true;
       try {
@@ -365,10 +365,10 @@ const probeScript = (desiredVolume, blockAds, wantId) => `(() => {
     }
     // The queue is a big list of components; walking it is the costly part of a look. So it is only walked when the
     // song, the list or the wanted song changed (or every 5 seconds); otherwise the last answer is reused.
-    const nl = document.querySelectorAll('ytmusic-player-queue-item');
+    const nl = document.getElementsByTagName('ytmusic-player-queue-item'); // a live list: asking its length costs nothing
     const qc = window.__lpQ || (window.__lpQ = { n: -1, t: 0, vid: null, want: null });
     const tNow = Date.now();
-    const wantVid = ${JSON.stringify(wantId || '')};
+    const wantVid = wantId || '';
     let queueIds;
     if (nl.length !== qc.n || vid !== qc.vid || wantVid !== qc.want || tNow - qc.t > 5000) {
       const items = [...nl];
@@ -416,7 +416,12 @@ const probeScript = (desiredVolume, blockAds, wantId) => `(() => {
       url: location.href,
     };
   } catch (e) { return { hasMedia: false, error: String(e) }; }
-})()`;
+})`;
+const probeArgs = (desiredVolume, blockAds, wantId) => `${desiredVolume == null ? 'null' : Number(desiredVolume)}, ${blockAds ? 'true' : 'false'}, ${JSON.stringify(wantId || '')}`;
+// The whole probe as one script (used by the tests and as the first look after the page loads).
+const probeScript = (desiredVolume, blockAds, wantId) => `(window.__lpProbeFn = ${PROBE_FN})(${probeArgs(desiredVolume, blockAds, wantId)})`;
+// Every later look only calls the function that is already in the page, so the page does not parse the whole script four times a second.
+const probeCall = (desiredVolume, blockAds, wantId) => `(window.__lpProbeFn ? window.__lpProbeFn(${probeArgs(desiredVolume, blockAds, wantId)}) : '__noprobe')`;
 
 // Writes sudden volume changes (the app did not cause them) to volume-log.txt in the app's data folder.
 function logVolume(list) {
@@ -428,6 +433,7 @@ function logVolume(list) {
   } catch (_) { /* diagnostic only */ }
 }
 
+let lastSentState = '';
 async function pollYt() {
   if (ytPolling || !ytView || !win || ytView.webContents.isDestroyed()) return;
   // Minimised or hidden: look a quarter as often, except near the end of a song so the next one still starts on time.
@@ -438,7 +444,8 @@ async function pollYt() {
   }
   ytPolling = true;
   try {
-    const state = await ytView.webContents.executeJavaScript(probeScript(ytDesiredVolume, adBlock, ctl.wantId), true);
+    let state = await ytView.webContents.executeJavaScript(probeCall(ytDesiredVolume, adBlock, ctl.wantId), true);
+    if (state === '__noprobe') state = await ytView.webContents.executeJavaScript(probeScript(ytDesiredVolume, adBlock, ctl.wantId), true);
     if (state && state.hasMedia && !state.ad && state.videoId) {
       if (ytHistory[ytHistory.length - 1] !== state.videoId) {
         ytHistory.push(state.videoId);
@@ -451,7 +458,14 @@ async function pollYt() {
     if (state && Array.isArray(state.queueIds)) ctl.qids = state.queueIds;
     if (state && state.hasMedia) controllerTick(state);
     if (state) { learnMeta(state); state.next = computeNext(state); }
-    if (win && !win.isDestroyed()) win.webContents.send('player:state', state);
+    // Paused and nothing changed: the window already shows this, so skip sending it again.
+    let same = false;
+    if (state && state.hasMedia && !state.playing) {
+      const str = JSON.stringify(state);
+      same = str === lastSentState;
+      lastSentState = str;
+    } else lastSentState = '';
+    if (!same && win && !win.isDestroyed()) win.webContents.send('player:state', state);
     if (stateHook && state) stateHook(state);
     Discord.update(state);
   } catch (_) {

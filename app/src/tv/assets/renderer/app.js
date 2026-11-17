@@ -724,9 +724,12 @@
     }
 
     const playing = !!s.playing;
-    els.iconPlay.toggleAttribute('hidden', playing);
-    els.iconPause.toggleAttribute('hidden', !playing);
-    els.btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    if (state.paintedPlaying !== playing) { // only touch the buttons when it changes
+      state.paintedPlaying = playing;
+      els.iconPlay.toggleAttribute('hidden', playing);
+      els.iconPause.toggleAttribute('hidden', !playing);
+      els.btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    }
     if (state.holdFirst && playing) {
       state.holdFirst = false;
       P.cmd('pause');
@@ -767,12 +770,14 @@
     const cur = s.cur || 0;
     const dur = s.dur || 0;
     if (!state.seeking) {
-      els.seek.max = String(dur);
+      const curText = L.formatTime(cur);
+      if (els.seek.max !== String(dur)) els.seek.max = String(dur);
       els.seek.value = String(cur);
-      els.cur.textContent = L.formatTime(cur);
+      if (els.cur.textContent !== curText) els.cur.textContent = curText; // once a second, not four times
       setRangeFill(els.seek);
     }
-    els.dur.textContent = L.formatTime(dur);
+    const durText = L.formatTime(dur);
+    if (els.dur.textContent !== durText) els.dur.textContent = durText;
     syncLyrics(cur);
   }
 

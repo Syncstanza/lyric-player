@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 47,
+    title: 'Lighter on your computer',
+    items: [
+      { text: 'Less work in the background while music plays: the app no longer re-sends the whole YouTube Music check four times a second, skips repeating itself while paused, and updates the clock and buttons only when they change.', desktop: true },
+    ],
+  },
+  {
     id: 46,
     title: 'Keyboard shortcuts',
     items: [

@@ -7,8 +7,8 @@ const vm = require('vm');
 /* The probe runs inside the YouTube Music page. Pull it out of main.js and run it against a fake page. */
 const lines = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8').split('\n');
 const a = lines.findIndex((l) => l.startsWith('const PICK_VIDEO'));
-const b = lines.findIndex((l, i) => i > a && l.startsWith('})()`;'));
-const probeScript = new Function(lines.slice(a, b + 1).join('\n') + '\nreturn probeScript;')();
+const b = lines.findIndex((l, i) => i > a && l.startsWith('const probeCall'));
+const probeScript = new Function(lines.slice(a, b).join('\n') + '\nreturn probeScript;')();
 
 function look(want, st) {
   const ctx = {
@@ -18,6 +18,7 @@ function look(want, st) {
     document: {
       querySelector: (sel) => (sel.includes('ad-showing') && st.ad ? {} : null),
       querySelectorAll: (sel) => (sel === 'video' ? [st.v] : []),
+      getElementsByTagName: () => [],
     },
   };
   ctx.window.document = ctx.document;
