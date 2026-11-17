@@ -1492,7 +1492,7 @@
     thread.amp += ((full && playing ? 1 : 0) - thread.amp) * Math.min(1, dt * 4); // eases in on play and settles flat on pause
     if (thread.amp < 0.01) thread.amp = 0;
     const b = Fluid.breath(now / 1000); // a slow, loose swell (not tied to the lyrics)
-    thread.phase += b.speed * dt; // the phase only grows, so the ripples always flow left to right
+    thread.phase += b.speed * dt; // the phase only grows, so the ripples always keep one direction
     Fluid.drawThread(thread.ctx, { w, h, head, phase: thread.phase, amp: thread.amp, energy: b.energy, colors: thread.colors });
     if (full && (playing || thread.amp > 0)) thread.raf = requestAnimationFrame(threadFrame);
   }

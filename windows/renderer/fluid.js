@@ -1,6 +1,6 @@
 /* Fluid UI helpers: the "sound-thread" progress line.
    A slow, loose "breathing" (not tied to the lyrics or the audio) so it feels alive without being busy.
-   The ripples always travel from left to right. Pure functions; works in the browser (window.Fluid) and in Node for the tests. */
+   The ripples keep one fixed direction (the one that looks left to right). Pure functions; works in the browser (window.Fluid) and in Node for the tests. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.Fluid = factory();
@@ -16,10 +16,11 @@
   }
 
   const SIGMA = 46, FREQ = 0.19;
-  // Height of the thread at x. The phase only grows, and the sign makes the crests move to the right.
+  // Height of the thread at x. The phase only grows. The crests travel toward lower x; on the screen this is the direction
+  // that looks left to right (chosen by eye by the owner from a side-by-side clip), so do not flip the sign back.
   function waveY(x, p) {
     const cy = p.h / 2, amp = (3 + 9 * p.energy) * p.amp;
-    return cy + amp * Math.exp(-Math.pow((x - p.hx) / SIGMA, 2)) * Math.sin((x - p.hx) * FREQ - p.phase);
+    return cy + amp * Math.exp(-Math.pow((x - p.hx) / SIGMA, 2)) * Math.sin((x - p.hx) * FREQ + p.phase);
   }
 
   // p: { w, h, head (0..1), phase, amp (0..1: playing amount), energy, colors {done, rest, dot} }
