@@ -603,3 +603,53 @@ html.intro-done #app{animation:none;opacity:1}
 .keys-row span { font-size: 14px; }
 .keys-key { min-width: 96px; text-align: center; font-variant-numeric: tabular-nums; }
 .keys-actions { display: flex; justify-content: space-between; gap: 10px; }
+
+/* ---------- fluid UI (Menu > Settings > Animations: full / light / off) ---------- */
+.seek-wrap { position: relative; height: 36px; display: flex; align-items: center; }
+.seek-wrap #seek { position: relative; z-index: 1; margin: 0; height: 36px; }
+#thread { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+html[data-anim="full"] #thread, html[data-anim="light"] #thread { display: block; }
+html[data-anim="full"] #seek::-webkit-slider-runnable-track, html[data-anim="light"] #seek::-webkit-slider-runnable-track { background: transparent; }
+html[data-anim="full"] #seek::-webkit-slider-thumb, html[data-anim="light"] #seek::-webkit-slider-thumb { opacity: 0; }
+
+/* the play button icon turns between play and pause */
+#btnPlay .fill { transition: d 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+@supports (d: path("M0 0 L1 1")) {
+  #btnPlay #iconPlayPath { d: path("M8 5 L8 19 L13.5 16 L13.5 8 Z M13.5 8 L13.5 16 L19 12 L19 12 Z"); }
+  #btnPlay.is-playing #iconPlayPath { d: path("M6.5 5 L6.5 19 L9.9 19 L9.9 5 Z M14.1 5 L14.1 19 L17.5 19 L17.5 5 Z"); }
+}
+.controls .icon { transition: transform 0.16s cubic-bezier(0.3, 1.5, 0.5, 1), background-color 0.2s; }
+.controls .icon:active { transform: scale(0.88); }
+@keyframes skipnudge-next { 40% { transform: translateX(8px); } 100% { transform: none; } }
+@keyframes skipnudge-prev { 40% { transform: translateX(-8px); } 100% { transform: none; } }
+#btnNext.skipnudge { animation: skipnudge-next 0.4s ease; }
+#btnPrev.skipnudge { animation: skipnudge-prev 0.4s ease; }
+@keyframes flipx { to { transform: rotateY(360deg); } }
+#btnShuffle.flip, #btnRepeat.flip { animation: flipx 0.5s ease; }
+@keyframes swap-next { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes swap-prev { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+.meta.swap-next { animation: swap-next 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.meta.swap-prev { animation: swap-prev 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes art-in { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: none; } }
+#app .art-img.art-in { animation: art-in 0.5s ease both; }
+.menu-panel { transform-origin: top right; }
+@keyframes menu-in { from { opacity: 0; transform: scale(0.92) translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes item-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.menu-panel:not([hidden]) { animation: menu-in 0.2s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+html[data-anim="full"] .menu-panel:not([hidden]) > * { animation: item-in 0.26s ease both; }
+html[data-anim="full"] .menu-panel:not([hidden]) > *:nth-child(2) { animation-delay: 0.03s; }
+html[data-anim="full"] .menu-panel:not([hidden]) > *:nth-child(3) { animation-delay: 0.06s; }
+html[data-anim="full"] .menu-panel:not([hidden]) > *:nth-child(4) { animation-delay: 0.09s; }
+html[data-anim="full"] .menu-panel:not([hidden]) > *:nth-child(5) { animation-delay: 0.12s; }
+html[data-anim="full"] .menu-panel:not([hidden]) > *:nth-child(n+6) { animation-delay: 0.15s; }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+#syncNudge:not([hidden]) { animation: sheet-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+input[type="range"]::-webkit-slider-thumb { transition: transform 0.15s; }
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.35); }
+.line.active { text-shadow: 0 0 22px color-mix(in srgb, var(--accent-2) 45%, transparent); }
+
+/* light: only simple fades; off: nothing moves */
+html[data-anim="light"] .controls .icon, html[data-anim="light"] #btnPlay .fill { transition: none; }
+html[data-anim="light"] #btnNext.skipnudge, html[data-anim="light"] #btnPrev.skipnudge, html[data-anim="light"] #btnShuffle.flip, html[data-anim="light"] #btnRepeat.flip, html[data-anim="light"] .meta.swap-next, html[data-anim="light"] .meta.swap-prev { animation: none; }
+html[data-anim="light"] .line.active { text-shadow: none; }
+html[data-anim="off"] #app *, html[data-anim="off"] #app *::before, html[data-anim="off"] #app *::after { animation: none !important; transition: none !important; }

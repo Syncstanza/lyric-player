@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-anim="full">
 <head>
   <meta charset="utf-8">
   <title>Lyric Player</title>
@@ -42,6 +42,7 @@
               <label class="menu-row" id="rowLang" hidden><span>Language</span><select id="selLang" aria-label="Language"></select></label>
               <label class="menu-row" id="rowTrans" hidden><span>Translate lyrics</span><select id="selTrans" aria-label="Translate lyrics"></select></label>
               <button id="btnClearTr" type="button" title="Delete the saved translations from this device" hidden>Clear translations</button>
+              <button id="btnAnim" type="button" title="How much the screen moves: full, light (simple fades only) or off">Animations: full</button>
               <button id="btnKeys" type="button" title="Choose your own keys for play, next, volume and more" hidden>Keyboard shortcuts</button>
               <button id="btnIntro" type="button" title="The short animation when the app opens">Intro screen: on</button>
               <button id="btnAnnShow" type="button" title="Show a small bar at the top when there is a new announcement">Show announcements: on</button>
@@ -109,7 +110,7 @@
     <footer class="dock">
       <div class="seek-row">
         <span id="cur" class="time">0:00</span>
-        <input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Seek">
+        <div class="seek-wrap"><canvas id="thread" aria-hidden="true"></canvas><input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Seek"></div>
         <span id="dur" class="time">0:00</span>
       </div>
       <div class="controls">
@@ -126,8 +127,7 @@
             <svg viewBox="0 0 24 24"><path class="fill" d="M19 5v14L8 12zM6 5v14"/></svg>
           </button>
           <button id="btnPlay" class="icon play" type="button" aria-label="Play" title="Play / pause (Space)">
-            <svg id="iconPlay" viewBox="0 0 24 24"><path class="fill" d="M8 5v14l11-7z"/></svg>
-            <svg id="iconPause" viewBox="0 0 24 24" hidden><path class="fill" d="M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z"/></svg>
+            <svg id="iconPlay" viewBox="0 0 24 24"><path id="iconPlayPath" class="fill" d="M8 5 L8 19 L13.5 16 L13.5 8 Z M13.5 8 L13.5 16 L19 12 L19 12 Z"/></svg>
           </button>
           <button id="btnNext" class="icon" type="button" aria-label="Next" title="Next">
             <svg viewBox="0 0 24 24"><path class="fill" d="M5 5v14l11-7zM18 5v14"/></svg>
@@ -222,6 +222,7 @@
   <script src="whatsnew.js"></script>
   <script src="i18n.js"></script>
   <script src="shortcuts.js"></script>
+  <script src="fluid.js"></script>
   <script src="quran.js"></script>
   <script src="android-core.js"></script>
   <script src="app.js"></script>

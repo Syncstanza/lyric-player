@@ -2,6 +2,15 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 49,
+    title: 'Smoother, livelier screen',
+    items: [
+      { text: 'The progress line is now a living thread: it ripples around the dot, swells with every new lyric line and moves faster when the singing is fast. It goes flat and calm when you pause.' },
+      { text: 'Small animations: the play button turns into pause, skip buttons nudge and the song title slides in, covers fade in, the menu opens out of its button, shuffle and repeat flip, and the Sync bar slides up.' },
+      { text: 'Choose how much moves in Menu > Settings > Animations: full, light (simple, TV default) or off.' },
+    ],
+  },
+  {
     id: 48,
     title: 'Faster on phones and TVs',
     items: [

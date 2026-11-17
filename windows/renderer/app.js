@@ -48,7 +48,8 @@
     btnRepeat: $('#btnRepeat'),
     repeatOne: $('#repeatOne'),
     iconPlay: $('#iconPlay'),
-    iconPause: $('#iconPause'),
+    thread: $('#thread'),
+    btnAnim: $('#btnAnim'),
     overlay: $('#overlay'),
     overlayMsg: $('#overlayMsg'),
     urlInput: $('#urlInput'),
@@ -151,6 +152,7 @@
     coverFilter: true,
     coverAsk: false,
     keys: { ...window.Shortcuts.DEFAULTS },
+    anim: 'full',
     coverOverrides: {},
     coverKey: '',
     coverMode: 'shown',
@@ -275,7 +277,7 @@
   els.btnMenu.addEventListener('click', () => { if (els.menuPanel.hidden) { openMenu(); const f = [...els.menuPanel.querySelectorAll('button')].find((b) => b.offsetParent !== null); if (f && window.__lpTv) f.focus(); } else closeMenu(); });
   els.menuPanel.addEventListener('click', (e) => { // choices that open something close the menu; the on/off switches stay so several can be flipped
     const b = e.target.closest('button');
-    if (b && !/^(btnMenuSettings|btnAds|btnCover|btnRoman|btnAnnShow|btnIntro|btnKeys|btnAuto|btnSide|btnFsSide|btnStartup|btnTray|btnDiscord|btnClearTr)$/.test(b.id)) closeMenu();
+    if (b && !/^(btnMenuSettings|btnAds|btnCover|btnRoman|btnAnnShow|btnIntro|btnKeys|btnAnim|btnAuto|btnSide|btnFsSide|btnStartup|btnTray|btnDiscord|btnClearTr)$/.test(b.id)) closeMenu();
   });
   document.addEventListener('pointerdown', (e) => { if (!els.menuPanel.hidden && !e.target.closest('.menu-wrap')) closeMenu(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && closeMenu(true)) e.stopPropagation(); }, true);
@@ -702,9 +704,12 @@
     if (els.upNext.title !== tip) els.upNext.title = tip;
   }
 
+  const PLAY_D = 'M8 5 L8 19 L13.5 16 L13.5 8 Z M13.5 8 L13.5 16 L19 12 L19 12 Z';
+  const PAUSE_D = 'M6.5 5 L6.5 19 L9.9 19 L9.9 5 Z M14.1 5 L14.1 19 L17.5 19 L17.5 5 Z';
   function onPlayerState(s) {
     if (!s) return;
     state.snap = s;
+    state.snapAt = performance.now();
     paintNext(s);
     if (!s.hasMedia) return;
 
@@ -726,8 +731,8 @@
     const playing = !!s.playing;
     if (state.paintedPlaying !== playing) { // only touch the buttons when it changes
       state.paintedPlaying = playing;
-      els.iconPlay.toggleAttribute('hidden', playing);
-      els.iconPause.toggleAttribute('hidden', !playing);
+      els.btnPlay.classList.toggle('is-playing', playing); // the icon morphs between play and pause (CSS)
+      els.iconPlay.firstElementChild.setAttribute('d', playing ? PAUSE_D : PLAY_D); // (the same shapes, for a browser without the CSS morph)
       els.btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
     }
     if (state.holdFirst && playing) {
@@ -779,6 +784,7 @@
     const durText = L.formatTime(dur);
     if (els.dur.textContent !== durText) els.dur.textContent = durText;
     syncLyrics(cur);
+    threadKick();
   }
 
   // Reads the art in the page itself (a fallback if the app's own download of it fails).
@@ -1058,6 +1064,7 @@
     state.currentTitle = videoData.title || '';
     state.currentArtist = cleanArtist(videoData.author);
     els.title.textContent = state.currentTitle || 'Unknown title';
+    fx(document.querySelector('.meta'), state.skipDir === 'prev' ? 'swap-prev' : 'swap-next', 600); state.skipDir = 'next';
     els.artist.textContent = state.currentArtist;
     document.title = state.currentTitle ? `${state.currentTitle} — Lyric Player` : 'Lyric Player';
     els.btnEdit.disabled = !state.currentTitle;
@@ -1447,7 +1454,66 @@
     els.btnRepeat.title = { off: 'Repeat: off', all: 'Repeat: playlist', one: 'Repeat: this song' }[state.repeat];
   }
 
+  /* ---------- fluid UI: small animations and the sound-thread ---------- */
+
+  function fx(el, cls, ms) { // play a one-off CSS animation class again
+    if (!el || state.anim === 'off') return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms || 600);
+  }
+  function skipFx(dir) { state.skipDir = dir; fx(dir === 'prev' ? els.btnPrev : els.btnNext, 'skipnudge', 450); }
+
+  const thread = { drawn: 0, raf: 0, amp: 0, last: 0, w: 0, h: 0, ctx: null, colors: null, cad: null, cadFor: null, n: 0 };
+  function threadColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const c = (k, d) => (cs.getPropertyValue(k) || d).trim() || d;
+    thread.colors = { done: c('--accent', '#c08a5e'), rest: c('--line', '#3a2f27'), dot: c('--accent-2', '#e0b48a') };
+  }
+  function threadFrame(ts) {
+    thread.raf = 0;
+    if (thread.drawn && ts - thread.drawn < 30 && state.anim === 'full') { thread.raf = requestAnimationFrame(threadFrame); return; } // about 30 frames a second
+    thread.drawn = ts;
+    const cv = els.thread;
+    if (state.anim === 'off' || !cv || document.hidden) return;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (thread.w !== w || thread.h !== h) { thread.w = w; thread.h = h; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); thread.ctx = cv.getContext('2d'); thread.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (!thread.ctx) return;
+    if (!thread.colors || thread.n++ % 90 === 0) threadColors();
+    const s = state.snap, dur = s && s.dur > 0 ? s.dur : 0;
+    const playing = !!(s && s.playing && !s.ad);
+    const now = performance.now();
+    let cur = s ? (s.cur || 0) + (playing ? (now - (state.snapAt || now)) / 1000 : 0) : 0;
+    if (dur) cur = Math.min(cur, dur);
+    const head = state.seeking ? (parseFloat(els.seek.value) || 0) / (parseFloat(els.seek.max) || 1) : (dur ? cur / dur : 0);
+    const data = state.lyricsData;
+    if (data !== thread.cadFor) { thread.cadFor = data; thread.cad = data && data.synced ? Fluid.makeCadence(data.lines) : null; }
+    const c = thread.cad ? thread.cad(cur + 0.15) : Fluid.IDLE;
+    const full = state.anim === 'full';
+    const dt = Math.min(0.1, (ts - (thread.last || ts)) / 1000); thread.last = ts;
+    thread.amp += ((full && playing ? 1 : 0) - thread.amp) * Math.min(1, dt * 6); // eases in on play and flat on pause
+    if (thread.amp < 0.01) thread.amp = 0;
+    Fluid.drawThread(thread.ctx, { w, h, head, t: now / 1000, amp: thread.amp, energy: c.energy, pulse: full ? c.pulse : 0, colors: thread.colors });
+    if (full && (playing || thread.amp > 0)) thread.raf = requestAnimationFrame(threadFrame);
+  }
+  function threadKick() { if (!thread.raf && state.anim !== 'off') thread.raf = requestAnimationFrame(threadFrame); }
+  document.addEventListener('visibilitychange', threadKick);
+  if (window.ResizeObserver && els.thread) new ResizeObserver(() => { thread.w = 0; threadKick(); }).observe(els.thread);
+  function applyAnim() {
+    document.documentElement.dataset.anim = state.anim;
+    els.btnAnim.textContent = 'Animations: ' + state.anim;
+    if (state.anim === 'off') { cancelAnimationFrame(thread.raf); thread.raf = 0; } else threadKick();
+  }
+  els.btnAnim.addEventListener('click', () => {
+    state.anim = Fluid.NEXT_LEVEL[state.anim] || 'full';
+    window.api.setSettings({ animations: state.anim });
+    applyAnim();
+  });
+  els.artImg.addEventListener('load', () => fx(els.artImg, 'art-in', 700));
+
   function toggleShuffle() {
+    fx(els.btnShuffle, 'flip', 600);
     state.shuffle = !state.shuffle;
     paintShuffle();
     P.cmd('setShuffle', state.shuffle);
@@ -1456,6 +1522,7 @@
   }
 
   function cycleRepeat() {
+    fx(els.btnRepeat, 'flip', 600);
     state.repeat = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
     paintRepeat();
     P.cmd('setRepeat', state.repeat);
@@ -1464,8 +1531,9 @@
   }
 
   els.btnPlay.addEventListener('click', () => { state.heldByUs = false; P.cmd('toggle'); });
-  els.btnNext.addEventListener('click', () => P.cmd('next'));
+  els.btnNext.addEventListener('click', () => { skipFx('next'); P.cmd('next'); });
   els.btnPrev.addEventListener('click', () => {
+    skipFx('prev');
     // Like most players: restart the song if we're past the first few seconds.
     if (state.snap && state.snap.cur > 3) P.cmd('seek', 0);
     else P.cmd('prev');
@@ -1559,7 +1627,7 @@
     };
     switch (action) {
       case 'play': state.heldByUs = false; P.cmd('toggle'); break;
-      case 'next': P.cmd('next'); break;
+      case 'next': skipFx('next'); P.cmd('next'); break;
       case 'prev': els.btnPrev.click(); break;
       case 'seekBack': P.cmd('seek', Math.max(0, cur - 5)); break;
       case 'seekFwd': P.cmd('seek', Math.min(dur - 1, cur + 5)); break;
@@ -1935,6 +2003,8 @@
     // The cover check runs an 8 MB image model; a TV stick starts with it off (it can be turned on with the button).
     state.coverFilter = settings.coverFilter === undefined && window.__lpTv ? false : settings.coverFilter !== false;
     state.keys = Shortcuts.merge(settings.shortcuts);
+    state.anim = Fluid.levelFrom(settings.animations, !!window.__lpTv);
+    applyAnim();
     state.coverAsk = settings.coverAsk === undefined ? (settings.coverFilter === undefined && !!window.__lpTv) : settings.coverAsk === true;
     state.coverOverrides = settings.coverOverrides && typeof settings.coverOverrides === 'object' ? settings.coverOverrides : {};
     applyCoverFilterButton();
