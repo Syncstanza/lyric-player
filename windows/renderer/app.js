@@ -1306,7 +1306,22 @@
       els.lines.appendChild(p);
     });
     els.lyrics.scrollTop = 0;
+    placeLyrics();
     maybeTranslate(); // only does anything when lyric translation is switched on
+  }
+
+  // When lyrics show up for a song that is paused (just opened the app, or they arrived late), no new "time" report
+  // comes in to move them, so they sat at the top until you pressed play. Put the current line in the middle right away,
+  // and once more when the screen has finished laying out.
+  function placeLyrics() {
+    const go = () => {
+      const s = state.snap;
+      if (!s || !state.lyricsData || !state.lyricsData.synced) return;
+      state.activeIdx = -1;
+      syncLyrics((s.cur || 0) + (s.playing ? (performance.now() - (state.snapAt || performance.now())) / 1000 : 0), true);
+    };
+    go();
+    setTimeout(go, 400);
   }
 
   // A very long entry (a long Quran verse with its translation) would run past the lyrics area. It is shrunk until it
@@ -1332,7 +1347,7 @@
     el.dataset.fit = key;
   }
 
-  function syncLyrics(currentTime) {
+  function syncLyrics(currentTime, instant) {
     const data = state.lyricsData;
     if (!data || !data.synced) return;
     const idx = L.activeIndex(data.lines, currentTime + 0.15);
@@ -1356,7 +1371,7 @@
     if (el) {
       fitLine(el);
       const top = el.offsetTop - els.lyrics.clientHeight / 2 + el.offsetHeight / 2;
-      els.lyrics.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      els.lyrics.scrollTo({ top: Math.max(0, top), behavior: instant || prev < 0 ? 'auto' : 'smooth' });
     }
   }
 

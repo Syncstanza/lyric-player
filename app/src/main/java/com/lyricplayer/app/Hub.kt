@@ -159,9 +159,22 @@ object Hub {
         ytCtx?.setBaseContext(appCtx)
     }
 
+    /** Keeps a page's engine at full priority even when the screen is off, so a play press from the car or a locked phone
+     *  is carried out at once instead of waiting until the phone is unlocked. */
+    private fun keepAlive(w: WebView) {
+        if (android.os.Build.VERSION.SDK_INT >= 26) w.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+    }
+
+    /** Wakes both pages up (timers and drawing may have been put to sleep while nothing was visible). */
+    fun wake() {
+        ui?.onResume(); yt?.onResume()
+        ui?.resumeTimers()
+    }
+
     /** A button press from the notification, headset or car: handled by the page's own player code. */
     fun command(name: String, arg: Double? = null) {
         main.post {
+            wake()
             val a = if (arg == null) "undefined" else arg.toString()
             ui?.evaluateJavascript("window.__lpCmd && window.__lpCmd('$name', $a)", null)
         }
@@ -226,6 +239,7 @@ object Hub {
 
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean { recover(view); return true }
         }
+        keepAlive(w)
         w.addJavascriptInterface(Bridge(), "LPNative")
         WebView.setWebContentsDebuggingEnabled(true)
         return w
@@ -253,6 +267,7 @@ object Hub {
         s.displayZoomControls = false
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(w, true)
+        keepAlive(w)
         w.addJavascriptInterface(YtBridge(), "LPYt")
 
         val script by lazy {

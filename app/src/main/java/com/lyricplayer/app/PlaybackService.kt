@@ -33,16 +33,34 @@ class PlaybackService : MediaBrowserServiceCompat() {
     private var lastStateAt = 0L
     private var lastPlaying: Boolean? = null
 
+    private var lock: android.os.PowerManager.WakeLock? = null
+
+    /** A press from the car or a locked phone: keep the processor awake for a few seconds so the press is finished
+     *  (the music has actually started) before the phone goes back to sleep, and be a foreground service again. */
+    private fun busy() {
+        try {
+            val l = lock ?: getSystemService(android.os.PowerManager::class.java)
+                .newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "LyricPlayer:command").also { it.setReferenceCounted(false); lock = it }
+            l.acquire(15_000L)
+        } catch (_: Exception) { }
+        if (!started) {
+            try {
+                ServiceCompat.startForeground(this, NOTIF_ID, notification(Hub.last), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                started = true
+            } catch (_: Exception) { }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         Hub.service = this
         session = MediaSessionCompat(this, "LyricPlayer")
         session.setCallback(object : MediaSessionCompat.Callback() {
-            override fun onPlay() = Hub.command("play")
+            override fun onPlay() { busy(); Hub.command("play") }
             override fun onPause() = Hub.command("pause")
             override fun onStop() = Hub.command("pause")
-            override fun onSkipToNext() = Hub.command("next")
-            override fun onSkipToPrevious() = Hub.command("prev")
+            override fun onSkipToNext() { busy(); Hub.command("next") }
+            override fun onSkipToPrevious() { busy(); Hub.command("prev") }
             override fun onSeekTo(pos: Long) = Hub.command("seek", pos / 1000.0)
             override fun onCustomAction(action: String?, extras: Bundle?) {
                 when (action) {
@@ -50,7 +68,7 @@ class PlaybackService : MediaBrowserServiceCompat() {
                     "lp.repeat" -> Hub.click("btnRepeat")
                 }
             }
-            override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) = Hub.command("play")
+            override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) { busy(); Hub.command("play") }
         })
         session.isActive = true
         sessionToken = session.sessionToken
@@ -61,9 +79,9 @@ class PlaybackService : MediaBrowserServiceCompat() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            "lp.play" -> Hub.command("toggle")
-            "lp.next" -> Hub.command("next")
-            "lp.prev" -> Hub.command("prev")
+            "lp.play" -> { busy(); Hub.command("toggle") }
+            "lp.next" -> { busy(); Hub.command("next") }
+            "lp.prev" -> { busy(); Hub.command("prev") }
         }
         if (!started) {
             started = true
@@ -85,6 +103,7 @@ class PlaybackService : MediaBrowserServiceCompat() {
     override fun onDestroy() {
         if (Hub.service === this) Hub.service = null
         session.isActive = false
+        try { lock?.release() } catch (_: Exception) { }
         session.release()
         super.onDestroy()
     }
