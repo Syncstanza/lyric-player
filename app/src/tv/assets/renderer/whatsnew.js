@@ -5,6 +5,7 @@ window.__whatsnew = [
     id: 50,
     title: 'Fixes for opening the app and the car',
     items: [
+      { text: 'The progress line now matches the song colours as soon as the app opens, instead of staying brown until you press play.' },
       { text: 'Opening the app with a song already loaded now puts the lyrics in the right place straight away, instead of waiting until you press play.' },
       { text: 'Pressing play from Android Auto or the lock screen while the phone is asleep now starts the music right away, without needing to unlock the phone first.', mobile: true },
     ],

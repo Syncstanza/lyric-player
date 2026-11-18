@@ -828,6 +828,7 @@
     root.setProperty('--glow', c.glow);
     root.setProperty('--glow-2', c.glow2);
     if (MINI) MINI.palette(c);
+    thread.colors = null; threadKick(); // the progress line takes the new colours at once, even while paused (it used to wait for the next play)
   }
 
   /* ---------- cover filter: hides explicit album covers ---------- */
