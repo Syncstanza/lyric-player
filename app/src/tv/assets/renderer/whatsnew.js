@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 51,
+    title: 'Progress line in full screen',
+    items: [
+      { text: 'In full screen the progress line and the times now stay on screen when the other controls fade away, so you can always see how far along the song is.' },
+    ],
+  },
+  {
     id: 50,
     title: 'Fixes for opening the app and the car',
     items: [

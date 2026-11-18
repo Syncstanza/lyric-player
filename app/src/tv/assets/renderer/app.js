@@ -1600,7 +1600,16 @@
 
   // Height of the control bar, so full screen can centre the content while the bar is hidden.
   const dockEl = document.querySelector('.dock');
-  const paintDock = () => { if (dockEl) els.app.style.setProperty('--dockH', dockEl.offsetHeight + 'px'); };
+  const paintDock = () => {
+    if (!dockEl) return;
+    els.app.style.setProperty('--dockH', dockEl.offsetHeight + 'px');
+    // How far the progress line drops when the other controls fade away, so it sits at the bottom edge (measured with the controls shown).
+    const row = dockEl.querySelector('.seek-row');
+    const below = [...dockEl.children].filter((c) => c !== row && !c.classList.contains('upnext') && c.offsetTop > row.offsetTop);
+    const last = below[below.length - 1];
+    const drop = last ? Math.max(0, last.offsetTop + last.offsetHeight - (row.offsetTop + row.offsetHeight)) : 0;
+    els.app.style.setProperty('--ctlH', drop + 'px');
+  };
   window.addEventListener('resize', paintDock);
 
   function wakeControls() {

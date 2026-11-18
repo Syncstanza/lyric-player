@@ -39,7 +39,7 @@ input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; margin-to
 /* Full screen: while the controls are hidden the lyrics and cover slide down to the middle of the TV,
    and slide back up when the controls return. (--dockH is the height of the control bar, set by tv.js.) */
 .stage { transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1); } /* only the slide: animating the columns re-lays-out the whole page every frame */
-#app.immersive.idle .stage { transform: translateY(calc(var(--dockH, 170px) / 2)); }
+#app.immersive.idle .stage { transform: translateY(calc(var(--ctlH, 120px) / 2)); }
 
 /* Lighter on TV hardware: colours change at once instead of fading (the fade repaints the whole screen's gradients every frame). */
 :root { transition: none; }
