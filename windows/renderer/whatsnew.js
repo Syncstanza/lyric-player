@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 52,
+    title: 'Progress line colour fix',
+    items: [
+      { text: 'When you open the app without pressing play, the progress line now fades to the song colours along with the rest of the screen, instead of staying brown.' },
+    ],
+  },
+  {
     id: 51,
     title: 'Progress line in full screen',
     items: [

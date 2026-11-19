@@ -828,7 +828,7 @@
     root.setProperty('--glow', c.glow);
     root.setProperty('--glow-2', c.glow2);
     if (MINI) MINI.palette(c);
-    thread.colors = null; threadKick(); // the progress line takes the new colours at once, even while paused (it used to wait for the next play)
+    thread.colors = null; thread.colorsUntil = performance.now() + 1500; threadKick(); // the page colours fade over about a second, so the progress line follows the fade (even while paused) instead of freezing on the first shade
   }
 
   /* ---------- cover filter: hides explicit album covers ---------- */
@@ -1515,7 +1515,7 @@
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     if (thread.w !== w || thread.h !== h) { thread.w = w; thread.h = h; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); thread.ctx = cv.getContext('2d'); thread.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
     if (!thread.ctx) return;
-    if (!thread.colors || thread.n++ % 90 === 0) threadColors();
+    if (!thread.colors || thread.n++ % 90 === 0 || performance.now() < (thread.colorsUntil || 0)) threadColors();
     const s = state.snap, dur = s && s.dur > 0 ? s.dur : 0;
     const playing = !!(s && s.playing && !s.ad);
     const now = performance.now();
@@ -1546,8 +1546,8 @@
       tip.style.opacity = String(thread.grab);
       tip.style.transform = `translate(${hxPx.toFixed(1)}px, ${(-30 - 6 * thread.grab).toFixed(1)}px) translateX(-50%) scale(${(0.85 + 0.15 * thread.grab).toFixed(3)})`;
     } else if (tip.style.opacity !== '0') tip.style.opacity = '0';
-    const busy = playing || thread.amp > 0 || state.seeking || thread.grab > 0 || Math.abs(target - thread.head) > 0.0005 || thread.ripAt;
-    if (full && busy) thread.raf = requestAnimationFrame(threadFrame);
+    const busy = playing || thread.amp > 0 || state.seeking || thread.grab > 0 || Math.abs(target - thread.head) > 0.0005 || thread.ripAt || now < (thread.colorsUntil || 0);
+    if ((full && busy) || now < (thread.colorsUntil || 0)) thread.raf = requestAnimationFrame(threadFrame);
   }
   function threadKick() { if (!thread.raf && state.anim !== 'off') thread.raf = requestAnimationFrame(threadFrame); }
   document.addEventListener('visibilitychange', threadKick);
