@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 53,
+    title: 'Full screen tidy-up',
+    items: [
+      { text: 'In full screen on the phone, the progress line no longer sits on top of the Sync buttons and "Wrong lyrics?"; they now stay clear above it.', mobile: true },
+    ],
+  },
+  {
     id: 52,
     title: 'Progress line colour fix',
     items: [

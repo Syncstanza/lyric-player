@@ -81,6 +81,9 @@ button.icon:hover { background: transparent; }
 #app.immersive.idle .stage { transform: none; } /* the controls already float here, so nothing needs centring */
 #app.immersive .dock { position: absolute; left: 0; right: 0; bottom: 0; padding-top: 28px; background: linear-gradient(to top, rgba(0, 0, 0, 0.62), transparent); z-index: 5; }
 
+/* The progress line stays on screen when the controls fade, so the content leaves room for it at the bottom (Sync / Wrong lyrics sit above it). */
+#app.immersive .stage { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+
 /* Full screen button: portrait keeps it centred above the play button; sideways it sits in a bottom corner (right by default, left from the menu). */
 #app.immersive .controls { grid-template-columns: minmax(0, 1fr); justify-items: stretch; }
 #app.immersive .side.left { width: 100%; justify-content: center; }
