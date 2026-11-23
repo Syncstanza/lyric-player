@@ -13,7 +13,6 @@ window.__whatsnew = [
     title: 'Early versions',
     items: [
       { text: 'New: Menu > Early versions. Turn it on to get new things before everyone else; the app then updates itself from the early builds. They can have bugs, and you can turn it off any time.' },
-      { text: 'Menu > Sound info shows which audio stream a song is using (handy when something sounds off).' },
     ],
   },
   {

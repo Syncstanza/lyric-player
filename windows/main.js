@@ -410,27 +410,7 @@ const PROBE_FN = `((desiredVolume, blockAds, wantId) => {
     const curIdx = qc.curIdx;
     const wantMeta = qc.wantMeta;
     const nextMeta = qc.nextMeta;
-    // Sound diagnostic (once per song, a few seconds in): which audio stream YouTube is really sending and what this engine can play.
-    if (v && v.currentTime > 4 && window.__lpAudioFor !== vid) {
-      window.__lpAudioFor = vid;
-      try {
-        const A = { vid, at: Math.round(v.currentTime), streams: [], support: {}, net: null, stats: null };
-        for (const e of performance.getEntriesByType('resource').slice(-60)) {
-          if (e.name.indexOf('googlevideo.com/videoplayback') < 0) continue;
-          const u = new URL(e.name), s = u.searchParams;
-          const key = (s.get('itag') || '?') + ' ' + decodeURIComponent(s.get('mime') || '?');
-          if (!A.streams.includes(key)) A.streams.push(key);
-        }
-        A.streams = A.streams.slice(-6);
-        if (typeof MediaSource !== 'undefined') for (const t of ['audio/webm; codecs="opus"', 'audio/mp4; codecs="mp4a.40.2"', 'audio/mp4; codecs="mp4a.40.5"', 'audio/mp4; codecs="flac"']) A.support[t.split('"')[1]] = MediaSource.isTypeSupported(t);
-        const c = navigator.connection; if (c) A.net = { type: c.effectiveType, down: c.downlink, saveData: !!c.saveData };
-        const mp = document.getElementById('movie_player');
-        if (mp && mp.getStatsForNerds) { const st = mp.getStatsForNerds(); A.stats = {}; for (const k of Object.keys(st || {})) { const x = st[k]; if (x != null && typeof x !== 'object' && String(x).length < 60) A.stats[k] = x; } }
-        window.__lpAudio = A;
-      } catch (e) { window.__lpAudio = { vid, error: String(e) }; }
-    }
     return {
-      audio: window.__lpAudio || null,
       wantMeta, nextMeta,
       hasMedia: !!(v && title),
       ad: adNow,

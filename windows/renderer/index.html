@@ -42,7 +42,6 @@
               <button id="btnClearTr" type="button" title="Delete the saved translations from this device" hidden>Clear translations</button>
               <button id="btnAnim" type="button" title="How much the screen moves: full, light (simple fades only) or off">Animations: full</button>
               <button id="btnKeys" type="button" title="Choose your own keys for play, next, volume and more" hidden>Keyboard shortcuts</button>
-              <button id="btnSound" type="button" title="Shows which audio stream and quality the current song is using">Sound info</button>
               <button id="btnIntro" type="button" title="The short animation when the app opens">Intro screen: on</button>
               <button id="btnAnnShow" type="button" title="Show a small bar at the top when there is a new announcement">Show announcements: on</button>
               <button id="btnFsSide" type="button" title="Which corner the full screen button sits in when the phone is sideways (left-handed? pick left)">Fullscreen button: right</button>
@@ -208,13 +207,6 @@
         <p class="keys-hint">Click a key, then press the new one. Backspace clears it. Esc cancels.</p>
         <div id="keysList" class="news-body keys-list"></div>
         <div class="keys-actions"><button id="keysReset" class="ghost" type="button">Reset to defaults</button><button id="keysClose" class="solid" type="button">Done</button></div>
-      </div>
-    </div>
-    <div id="sound" class="news" role="dialog" aria-modal="true" aria-labelledby="soundTitle" hidden>
-      <div class="news-card">
-        <h2 id="soundTitle">Sound info</h2>
-        <pre id="soundText" class="news-body" style="white-space:pre-wrap;word-break:break-word;font-size:13px;user-select:text"></pre>
-        <div class="keys-actions"><button id="soundClose" class="solid" type="button">Done</button></div>
       </div>
     </div>
     <div id="toast" class="toast" role="status" hidden></div>
