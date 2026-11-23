@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 56,
+    title: 'Better sound quality',
+    items: [
+      { text: 'Found why busy songs sounded muddy: the app was asking YouTube for its smallest picture to save battery, and YouTube then sent its lowest sound quality too. The app now keeps the normal sound quality.' },
+    ],
+  },
+  {
     id: 55,
     title: 'Early versions',
     items: [

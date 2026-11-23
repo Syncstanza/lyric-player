@@ -204,10 +204,12 @@ const PROBE_FN = `((desiredVolume, blockAds, wantId) => {
       qc.wantMeta = wantVid ? metaOf(items.find((i) => i.data && i.data.videoId === wantVid)) : null;
       qc.nextMeta = ci >= 0 ? metaOf(items[ci + 1]) : null;
     }
-    // Nobody watches the video (only the sound matters), so ask the page for its smallest picture, once per song.
+    // Nobody watches the video, but the smallest picture ("tiny", used by an earlier version to save battery) makes YouTube
+    // send its lowest sound tier too (opus itag 250, about 70 kbps: busy music sounds muddy and crackly). A middle picture
+    // size keeps the normal sound tier. Asked once per song; this also replaces the "tiny" the page remembered.
     if (v && vid && window.__lpLowQ !== vid) {
       window.__lpLowQ = vid;
-      try { const mp = document.getElementById('movie_player'); if (mp && mp.setPlaybackQualityRange) mp.setPlaybackQualityRange('tiny', 'tiny'); } catch (_) { /* the page changed: skip */ }
+      try { const mp = document.getElementById('movie_player'); if (mp && mp.setPlaybackQualityRange) mp.setPlaybackQualityRange('large', 'large'); } catch (_) { /* the page changed: skip */ }
     }
     const items = { length: qc.n };
     const curIdx = qc.curIdx;
