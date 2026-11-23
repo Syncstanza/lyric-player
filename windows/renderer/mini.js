@@ -8,6 +8,7 @@
   let lyr = null;            // { status, synced, lines: [{ time, text }] }
   let nodes = [];
   let idx = -2;
+  let artShown = null;
   let st = { hasMedia: false, title: '', artist: '', art: '', cur: 0, dur: 0, playing: false };
   let stamp = performance.now();
   let key = '';
@@ -106,9 +107,13 @@
       key = k;
       el.title.textContent = s.title || 'Unknown song';
       el.artist.textContent = s.artist || '';
-      el.cover.style.backgroundImage = s.art ? `url("${s.art.replace(/"/g, '%22')}")` : '';
       lyr = null; // the main window sends this song's lyrics next
       buildLyrics();
+    }
+    // The picture often arrives a moment after the title, so it is followed on its own (it used to be set only when the song changed).
+    if (s.art !== artShown) {
+      artShown = s.art;
+      el.cover.style.backgroundImage = s.art ? `url("${s.art.replace(/"/g, '%22')}")` : '';
     }
   }
 

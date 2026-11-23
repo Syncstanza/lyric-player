@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 57,
+    title: 'Mini player cover fix',
+    items: [
+      { text: 'The mini player now shows the cover right away. It used to stay empty when the picture arrived a moment after the song title, until you reopened it.', desktop: true },
+    ],
+  },
+  {
     id: 56,
     title: 'Better sound quality',
     items: [
