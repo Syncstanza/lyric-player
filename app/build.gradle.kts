@@ -12,9 +12,11 @@ android {
         minSdk = 26
         targetSdk = 34
         // Every build on GitHub counts up: 1.0.<build number>
+        // The normal and the early-version (dev) builds share one version code (minutes since 1970, set by the workflows), so
+        // either one installs over the other in the order they were made.
         val buildNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toIntOrNull() ?: 1
-        versionCode = buildNumber
-        versionName = "1.0.$buildNumber"
+        versionCode = (System.getenv("LP_VERSION_CODE") ?: "").toIntOrNull() ?: buildNumber
+        versionName = "1.0.$buildNumber" + (System.getenv("LP_VERSION_SUFFIX") ?: "")
     }
 
     flavorDimensions += "device"

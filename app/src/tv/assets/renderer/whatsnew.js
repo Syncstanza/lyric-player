@@ -2,6 +2,14 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 55,
+    title: 'Early versions',
+    items: [
+      { text: 'New: Menu > Early versions. Turn it on to get new things before everyone else; the app then updates itself from the early builds. They can have bugs, and you can turn it off any time.' },
+      { text: 'Menu > Sound info shows which audio stream a song is using (handy when something sounds off).' },
+    ],
+  },
+  {
     id: 54,
     title: 'Cleaner sound on loud songs',
     items: [

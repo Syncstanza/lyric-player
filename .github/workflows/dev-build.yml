@@ -1,12 +1,12 @@
 name: Dev build
-# Builds test copies from the dev branch so they can be tried before they go to the public releases.
-# They install NEXT TO the real app (own name, own settings) and never offer updates. They are published as DRAFT releases
-# (dev-windows, dev-android): a draft is visible only to people with write access to the repo, so only the owner sees it
-# (github.com/Syncstanza/lyric-player/releases while signed in). The real releases (latest, windows-latest, linux-latest) are not touched.
+# Early versions from the dev branch. They are the real app (same name, same settings, same signing key), published as
+# PRE-RELEASES under their own tags (android-dev, windows-dev, linux-dev). Nothing offers them by default: a person has to
+# turn on Menu > "Early versions" in the app, and then the app updates itself from these instead of the normal releases.
+# The normal releases (latest, windows-latest, linux-latest) are not touched.
 on:
   push:
     branches: [dev]
-    paths-ignore: ['**/*.md', 'docs/**']
+    paths-ignore: ['**/*.md', 'docs/**', 'announcements.json']
   workflow_dispatch:
 
 permissions:
@@ -24,24 +24,26 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Stamp this build (no platform, so it never offers an update)
+      - name: Stamp this build
         run: |
           V="1.0.$GITHUB_RUN_NUMBER-dev"
-          printf 'window.__build = { sha: "%s", platform: "", version: "%s" };\n' "$GITHUB_SHA" "$V" > app/src/phone/assets/renderer/build-info.js
-          printf 'window.__build = { sha: "%s", platform: "", version: "%s" };\n' "$GITHUB_SHA" "$V" > app/src/tv/assets/renderer/build-info.js
-      - name: Build the dev APKs
-        run: gradle --no-daemon --stacktrace assemblePhoneDev assembleTvDev
+          printf 'window.__build = { sha: "%s", platform: "phone", version: "%s" };\n' "$GITHUB_SHA" "$V" > app/src/phone/assets/renderer/build-info.js
+          printf 'window.__build = { sha: "%s", platform: "tv", version: "%s" };\n' "$GITHUB_SHA" "$V" > app/src/tv/assets/renderer/build-info.js
+      - name: Build the APKs
+        run: |
+          export LP_VERSION_CODE=$(( $(date +%s) / 60 ))
+          export LP_VERSION_SUFFIX=-dev
+          gradle --no-daemon --stacktrace assemblePhoneDebug assembleTvDebug
       - name: Name the files
         run: |
-          cp app/build/outputs/apk/phone/dev/app-phone-dev.apk LyricPlayer-DEV.apk
-          cp app/build/outputs/apk/tv/dev/app-tv-dev.apk LyricPlayer-TV-DEV.apk
-      - name: Publish as the private "dev-android" draft
+          cp app/build/outputs/apk/phone/debug/app-phone-debug.apk LyricPlayer.apk
+          cp app/build/outputs/apk/tv/debug/app-tv-debug.apk LyricPlayer-TV.apk
+      - name: Publish as the "android-dev" pre-release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for id in $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.tag_name=="dev-android") | .id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
-          git push origin --delete dev-android 2>/dev/null || true
-          gh release create dev-android LyricPlayer-DEV.apk LyricPlayer-TV-DEV.apk --draft --title "Lyric Player DEV (Android test build)" --notes "A TEST build from the dev branch. It installs next to the normal app and has its own settings. Not for everyday use." --target "$GITHUB_SHA"
+          gh release delete android-dev --yes --cleanup-tag || true
+          gh release create android-dev LyricPlayer.apk LyricPlayer-TV.apk --prerelease --title "Lyric Player EARLY VERSION (Android)" --notes "An early version from the dev branch, for people who turned on Early versions in the app. It can have bugs. It installs over the normal app (same settings). LyricPlayer.apk is for phones and Android Auto, LyricPlayer-TV.apk for Google TV." --target "$GITHUB_SHA"
 
   windows:
     runs-on: windows-latest
@@ -50,13 +52,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Stamp this build (no platform, so it never offers an update)
+      - name: Stamp this build
         shell: bash
         run: |
           V="1.0.$GITHUB_RUN_NUMBER-dev"
-          printf 'window.__build = { sha: "%s", platform: "", version: "%s" };\n' "$GITHUB_SHA" "$V" > windows/renderer/build-info.js
+          printf 'window.__build = { sha: "%s", platform: "windows", version: "%s" };\n' "$GITHUB_SHA" "$V" > windows/renderer/build-info.js
           (cd windows && npm version "$V" --no-git-tag-version --allow-same-version)
-      - name: Install, test, build the portable dev .exe
+      - name: Install, test, build the installer and the portable .exe
         working-directory: windows
         shell: bash
         env:
@@ -64,12 +66,41 @@ jobs:
         run: |
           npm install
           npm test
-          npx electron-builder --win portable -c.productName="Lyric Player DEV" -c.appId=com.lyricplayer.app.dev '-c.portable.artifactName=Lyric-Player-DEV-${version}.exe'
-      - name: Publish as the private "dev-windows" draft
+          npm run dist
+      - name: Publish as the "windows-dev" pre-release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for id in $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.tag_name=="dev-windows") | .id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"; done
-          git push origin --delete dev-windows 2>/dev/null || true
-          gh release create dev-windows windows/dist/Lyric-Player-DEV-*.exe --draft --title "Lyric Player DEV (Windows test build)" --notes "A TEST build from the dev branch: download and double-click, no install. It has its own name and settings, so it can run next to the normal app. Not for everyday use." --target "$GITHUB_SHA"
+          for f in windows/dist/Lyric-Player-*.exe; do sha256sum "$f" | cut -d' ' -f1 > "$f.sha256"; done
+          gh release delete windows-dev --yes --cleanup-tag || true
+          gh release create windows-dev windows/dist/Lyric-Player-*.exe windows/dist/Lyric-Player-*.exe.sha256 --prerelease --title "Lyric Player EARLY VERSION (Windows)" --notes "An early version from the dev branch, for people who turned on Early versions in the app. It can have bugs. Lyric-Player-Setup-<version>.exe installs it, Lyric-Player-<version>.exe is the portable app." --target "$GITHUB_SHA"
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Stamp this build
+        shell: bash
+        run: |
+          V="1.0.$GITHUB_RUN_NUMBER-dev"
+          printf 'window.__build = { sha: "%s", platform: "linux", version: "%s" };\n' "$GITHUB_SHA" "$V" > windows/renderer/build-info.js
+          (cd windows && npm version "$V" --no-git-tag-version --allow-same-version)
+      - name: Install, test, build the .deb and AppImage
+        working-directory: windows
+        shell: bash
+        run: |
+          npm install
+          npm test
+          npm run dist:linux
+      - name: Publish as the "linux-dev" pre-release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for f in windows/dist/Lyric-Player-*.AppImage; do sha256sum "$f" | cut -d' ' -f1 > "$f.sha256"; done
+          gh release delete linux-dev --yes --cleanup-tag || true
+          gh release create linux-dev windows/dist/Lyric-Player-*.deb windows/dist/Lyric-Player-*.AppImage windows/dist/Lyric-Player-*.AppImage.sha256 --prerelease --title "Lyric Player EARLY VERSION (Linux)" --notes "An early version from the dev branch, for people who turned on Early versions in the app. It can have bugs." --target "$GITHUB_SHA"

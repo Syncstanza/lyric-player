@@ -3,12 +3,14 @@
 - **`main`** is what people get. Every push to `main` builds Windows, Linux and Android and publishes them as the `latest` releases.
 - **`dev`** is where work happens. Pushing to `dev` only runs the tests (nothing is published).
 
-## Test builds from `dev`
-Every push to `dev` also builds test copies, published as **draft releases**. A draft is visible only to you while signed in to GitHub (Releases page, top of the list, marked Draft); nobody else can see or download it:
-- **dev-windows**: `Lyric-Player-DEV-<version>.exe` (portable, no install).
-- **dev-android**: `LyricPlayer-DEV.apk` (phone) and `LyricPlayer-TV-DEV.apk` (TV).
+## Early versions (the `dev` channel)
+Every push to `dev` also builds the real app (same name, same settings, same signing key) and publishes it as a **pre-release** under its own tag:
+- **windows-dev**: installer, portable `.exe` and their `.sha256` files.
+- **linux-dev**: `.deb`, AppImage and its `.sha256`.
+- **android-dev**: `LyricPlayer.apk` (phone) and `LyricPlayer-TV.apk` (TV).
 
-They have their own name and settings and install next to the real app, and they never show "Update available". Try them, then merge `dev` into `main` to release.
+Nobody gets these by default. A person turns on **Menu > Early versions** in the app, and from then on the update button and the in-place updater look at these tags instead of `latest`, `windows-latest` and `linux-latest`. Turning it off goes back to the normal releases (which can be a little older, so Android may refuse that downgrade until the next normal release; Windows and Linux just replace the file).
+Android version codes come from the clock (minutes since 1970, set in both workflows), so an early build and a normal build always install over each other in the order they were made. Merging `dev` into `main` publishes the normal release as before.
 
 ## Small update or hotfix
 1. Work on `dev`, push, wait for the **Test (dev)** check to pass.

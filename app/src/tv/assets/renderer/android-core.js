@@ -1209,9 +1209,11 @@ async function jsonGet(label, url, headers, timeoutMs) {
 
 const lrclibRequest = (pathAndQuery) => jsonGet('LRCLIB', LRCLIB + pathAndQuery);
 
-// The newest published build of this app (for the update button). Only the two release tags are ever asked for.
+// The newest published build of this app (for the update button). Only these release tags are ever asked for
+// (the "-dev" ones are the early versions that people opt in to under Menu > Early versions).
+const UPDATE_TAGS = ['latest', 'windows-latest', 'linux-latest', 'android-dev', 'windows-dev', 'linux-dev'];
 ipcMain.handle('app:latestRelease', async (_e, tag) => {
-  if (tag !== 'latest' && tag !== 'windows-latest' && tag !== 'linux-latest') return null;
+  if (!UPDATE_TAGS.includes(tag)) return null;
   try {
     const r = await jsonGet('GitHub', `https://api.github.com/repos/Syncstanza/lyric-player/releases/tags/${tag}`, { Accept: 'application/vnd.github+json' });
     if (!r) return null;

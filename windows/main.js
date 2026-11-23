@@ -1663,9 +1663,11 @@ async function jsonGet(label, url, headers, timeoutMs) {
 
 const lrclibRequest = (pathAndQuery) => jsonGet('LRCLIB', LRCLIB + pathAndQuery);
 
-// The newest published build of this app (for the update button). Only the two release tags are ever asked for.
+// The newest published build of this app (for the update button). Only these release tags are ever asked for
+// (the "-dev" ones are the early versions that people opt in to under Menu > Early versions).
+const UPDATE_TAGS = ['latest', 'windows-latest', 'linux-latest', 'android-dev', 'windows-dev', 'linux-dev'];
 ipcMain.handle('app:latestRelease', async (_e, tag) => {
-  if (tag !== 'latest' && tag !== 'windows-latest' && tag !== 'linux-latest') return null;
+  if (!UPDATE_TAGS.includes(tag)) return null;
   try {
     const r = await jsonGet('GitHub', `https://api.github.com/repos/Syncstanza/lyric-player/releases/tags/${tag}`, { Accept: 'application/vnd.github+json' });
     if (!r) return null;
@@ -2065,9 +2067,10 @@ function installedWindows() {
 }
 
 function selfUpdateTarget() {
-  if (process.platform === 'win32' && process.env.PORTABLE_EXECUTABLE_FILE) return { file: process.env.PORTABLE_EXECUTABLE_FILE, tag: 'windows-latest', pick: /^Lyric-Player-(?!Setup).*\.exe$/i };
-  if (installedWindows()) return { installer: true, tag: 'windows-latest', pick: /^Lyric-Player-Setup-.*\.exe$/i };
-  if (process.platform === 'linux' && process.env.APPIMAGE) return { file: process.env.APPIMAGE, tag: 'linux-latest', pick: /\.AppImage$/i };
+  const dev = loadSettings().devChannel === true; // Menu > Early versions
+  if (process.platform === 'win32' && process.env.PORTABLE_EXECUTABLE_FILE) return { file: process.env.PORTABLE_EXECUTABLE_FILE, tag: dev ? 'windows-dev' : 'windows-latest', pick: /^Lyric-Player-(?!Setup).*\.exe$/i };
+  if (installedWindows()) return { installer: true, tag: dev ? 'windows-dev' : 'windows-latest', pick: /^Lyric-Player-Setup-.*\.exe$/i };
+  if (process.platform === 'linux' && process.env.APPIMAGE) return { file: process.env.APPIMAGE, tag: dev ? 'linux-dev' : 'linux-latest', pick: /\.AppImage$/i };
   return null;
 }
 

@@ -85,6 +85,7 @@
     btnCheckUpdate: $('#btnCheckUpdate'),
     menuPanel: $('#menuPanel'),
     btnUpdate: $('#btnUpdate'),
+    btnDevChannel: $('#btnDevChannel'),
     btnFolder: $('#btnFolder'),
     btnAuto: $('#btnAuto'),
     btnRoman: $('#btnRoman'),
@@ -279,7 +280,7 @@
   els.btnMenu.addEventListener('click', () => { if (els.menuPanel.hidden) { openMenu(); const f = [...els.menuPanel.querySelectorAll('button')].find((b) => b.offsetParent !== null); if (f && window.__lpTv) f.focus(); } else closeMenu(); });
   els.menuPanel.addEventListener('click', (e) => { // choices that open something close the menu; the on/off switches stay so several can be flipped
     const b = e.target.closest('button');
-    if (b && !/^(btnMenuSettings|btnAds|btnCover|btnRoman|btnAnnShow|btnIntro|btnKeys|btnAnim|btnAuto|btnSide|btnFsSide|btnStartup|btnTray|btnDiscord|btnClearTr)$/.test(b.id)) closeMenu();
+    if (b && !/^(btnMenuSettings|btnAds|btnCover|btnRoman|btnAnnShow|btnIntro|btnKeys|btnDevChannel|btnAnim|btnAuto|btnSide|btnFsSide|btnStartup|btnTray|btnDiscord|btnClearTr)$/.test(b.id)) closeMenu();
   });
   document.addEventListener('pointerdown', (e) => { if (!els.menuPanel.hidden && !e.target.closest('.menu-wrap')) closeMenu(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && closeMenu(true)) e.stopPropagation(); }, true);
@@ -315,7 +316,7 @@
     }
     openLink(updateInfo.url);
     toast(window.__lpTv
-      ? `New version: open github.com/${REPO}/releases/tag/latest and download LyricPlayer-TV.apk (the Downloader app works well).`
+      ? `New version: open github.com/${REPO}/releases/tag/${devOn ? 'android-dev' : 'latest'} and download LyricPlayer-TV.apk (the Downloader app works well).`
       : window.__build && window.__build.platform === 'linux' ? 'Downloading the new version (.deb). Open it with the software installer, or run: sudo apt install ./Lyric-Player-*.deb' : window.api.mini ? 'Downloading the new version. Close this app and run the new file instead.' : 'Downloading the new version. Open the file when it finishes to update.', 9000);
   });
   // manual = from the Menu: always asks GitHub and always says what it found.
@@ -328,7 +329,8 @@
     if (st.updateInfo && st.updateInfo.sha && st.updateInfo.sha !== B.sha && st.updateInfo.platform === B.platform) showUpdate(st.updateInfo); // found earlier, not installed yet
     const now = Date.now();
     if (!manual && st.updateCheckedAt && now - st.updateCheckedAt < 30 * 60 * 1000 && now >= st.updateCheckedAt) return;
-    const tag = B.platform === 'windows' ? 'windows-latest' : B.platform === 'linux' ? 'linux-latest' : 'latest';
+    const dev = st.devChannel === true; // Menu > Early versions: look at the early builds instead of the normal release
+    const tag = B.platform === 'windows' ? (dev ? 'windows-dev' : 'windows-latest') : B.platform === 'linux' ? (dev ? 'linux-dev' : 'linux-latest') : (dev ? 'android-dev' : 'latest');
     const want = B.platform === 'windows' ? /^Lyric-Player-(?!Setup).*\.exe$/i : B.platform === 'linux' ? /\.deb$/i : B.platform === 'tv' ? /^LyricPlayer-TV\.apk$/i : /^LyricPlayer\.apk$/i;
     try {
       const rel = await window.api.latestRelease(tag);
@@ -350,6 +352,18 @@
     } catch (_) { say("Couldn't check for updates."); }
   }
   els.btnCheckUpdate.addEventListener('click', () => { toast('Checking for updates…', 3000); checkForUpdate(true); });
+  // Early versions: the app looks at the dev builds instead of the normal release. Turning it on asks twice.
+  let devOn = false, devAskedAt = 0;
+  const paintDev = () => { els.btnDevChannel.textContent = 'Early versions: ' + (devOn ? 'on' : 'off'); };
+  window.api.getSettings().then((st) => { devOn = st.devChannel === true; paintDev(); }).catch(() => {});
+  els.btnDevChannel.addEventListener('click', () => {
+    if (!devOn && Date.now() - devAskedAt > 6000) { devAskedAt = Date.now(); toast('Early versions get new things first and can have bugs. Tap again to turn them on.', 6000); return; }
+    devOn = !devOn; devAskedAt = 0; paintDev();
+    window.api.setSettings({ devChannel: devOn, updateInfo: null, updateCheckedAt: 0 });
+    els.btnUpdate.hidden = true; updateInfo = null;
+    toast(devOn ? 'Early versions are on. Checking for the newest one…' : 'Early versions are off. Updates now come from the normal release, which can be a little older than the early one you have.', 8000);
+    if (devOn) checkForUpdate(true);
+  });
   setTimeout(() => checkForUpdate(false), window.__lpTv ? 60000 : 15000);
 
   /* ---------- importing a Spotify / Deezer / SoundCloud playlist ---------- */
