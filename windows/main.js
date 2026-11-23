@@ -326,9 +326,12 @@ const PROBE_FN = `((desiredVolume, blockAds, wantId) => {
     const want = desiredVolume == null ? null : Number(desiredVolume);
     const vid = new URL(location.href).searchParams.get('v') || '';
     // YouTube resets the volume to 100 now and then (at the start of a song and sometimes mid-song), which is heard as a
-    // spike. So the page's own volume setter is blocked while a volume is wanted (only this app sets it), and the level
-    // is put back at once on the media events and, as a safety net, on every look if it still differs.
+    // spike. So while a volume is wanted, the page's own volume setter no longer sets the level directly: what YouTube asks
+    // for is kept as its "loudness evening" factor (YouTube turns loud songs down a little, like its own app does), and the
+    // level actually used is the wanted volume times that factor, so it can never go above the wanted volume. The level is
+    // also put back at once on the media events and, as a safety net, on every look if it still differs.
     window.__lpWant = want;
+    const lvl = () => Math.max(0, Math.min(1, window.__lpWant / 100)) * (window.__lpNorm == null ? 1 : window.__lpNorm);
     if (!window.__lpGuard && typeof HTMLMediaElement !== 'undefined' && typeof document.addEventListener === 'function') {
       window.__lpGuard = true;
       try {
@@ -337,20 +340,28 @@ const PROBE_FN = `((desiredVolume, blockAds, wantId) => {
           window.__lpSetVol = (el, x) => d.set.call(el, x);
           Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
             configurable: true, enumerable: d.enumerable, get: d.get,
-            set(x) { if (window.__lpWant != null && !window.__lpAdNow) return; d.set.call(this, x); },
+            set(x) {
+              if (window.__lpWant != null && !window.__lpAdNow) {
+                const n = Number(x);
+                if (isFinite(n)) window.__lpNorm = Math.max(0, Math.min(1, n));
+                d.set.call(this, lvl());
+                return;
+              }
+              d.set.call(this, x);
+            },
           });
         }
       } catch (_) { /* the look below still corrects it */ }
       const enforce = (e) => {
         const el = e.target;
         if (!el || el.tagName !== 'VIDEO' || window.__lpWant == null || window.__lpAdNow) return;
-        const w = Math.max(0, Math.min(1, window.__lpWant / 100));
+        const w = lvl();
         if (Math.abs(el.volume - w) > 0.015) (window.__lpSetVol || ((q, x) => { q.volume = x; }))(el, w);
       };
       for (const ev of ['loadstart', 'emptied', 'playing', 'volumechange']) document.addEventListener(ev, enforce, true);
     }
-    if (v && want != null && !window.__lpAdNow && Math.abs(v.volume * 100 - want) > 1.5) {
-      const w = Math.max(0, Math.min(1, want / 100));
+    if (v && want != null && !window.__lpAdNow && Math.abs(v.volume - lvl()) > 0.015) {
+      const w = lvl();
       (window.__lpSetVol || ((q, x) => { q.volume = x; }))(v, w);
       window.__lpLastVol = v.volume;
     }

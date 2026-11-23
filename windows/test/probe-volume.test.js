@@ -39,3 +39,33 @@ test('volume is put back whenever YouTube moves it, and left alone during an ad'
   st.ad = true; st.vid = 'ghi'; v.volume = 1; look(60, st);
   assert.strictEqual(v.volume, 1);                   // during an ad it is not touched
 });
+
+test("YouTube's own loudness evening is kept (loud songs stay a little quieter), never above the wanted volume", () => {
+  let raw = 1;
+  class Media {}
+  Object.defineProperty(Media.prototype, 'volume', { configurable: true, enumerable: true, get() { return raw; }, set(x) { raw = x; } });
+  const el = new Media();
+  Object.assign(el, {});
+  const v = new Proxy(el, { get: (t, k) => (k === 'readyState' ? 4 : k === 'paused' ? false : k === 'muted' ? false : k === 'duration' ? 200 : k === 'currentTime' ? 5 : k === 'playbackRate' ? 1 : k === 'tagName' ? 'VIDEO' : t[k]), set: (t, k, val) => { t[k] = val; return true; } });
+  const listeners = {};
+  const win = {};
+  const ctx = vm.createContext({
+    window: win, URL, Date, Math, isFinite, Number, HTMLMediaElement: Media,
+    navigator: { mediaSession: { metadata: { title: 'T', artist: 'A', album: '', artwork: [] } } },
+    location: { href: 'https://music.youtube.com/watch?v=abc' },
+    document: {
+      querySelector: () => null, querySelectorAll: (sel) => (sel === 'video' ? [v] : []), getElementsByTagName: () => [],
+      addEventListener: (ev, fn) => { (listeners[ev] = listeners[ev] || []).push(fn); },
+    },
+  });
+  win.document = ctx.document;
+  const run = (want) => vm.runInContext(probeScript(want, true, null), ctx);
+  run(80);
+  assert.ok(Math.abs(raw - 0.8) < 1e-9);
+  Media.prototype.volume = 0.6;                       // YouTube evens out a loud song
+  assert.ok(Math.abs(raw - 0.48) < 1e-9, `got ${raw}`); // 0.8 wanted x 0.6
+  Media.prototype.volume = 1;                         // YouTube's reset to 100
+  assert.ok(Math.abs(raw - 0.8) < 1e-9, `got ${raw}`); // never louder than wanted
+  Media.prototype.volume = 0.6; run(50);              // the slider moved to 50
+  assert.ok(Math.abs(raw - 0.3) < 1e-9, `got ${raw}`);
+});

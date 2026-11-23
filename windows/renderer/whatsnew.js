@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 54,
+    title: 'Cleaner sound on loud songs',
+    items: [
+      { text: 'Loud, busy songs no longer play harder than they should: the app now keeps YouTube Music\'s own loudness evening, like the YouTube Music app does, so full-band sections stop crackling.' },
+    ],
+  },
+  {
     id: 53,
     title: 'Full screen tidy-up',
     items: [
