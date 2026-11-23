@@ -94,9 +94,10 @@ new_classify = '''  async function classifyCover(url) {
       const model = await ensureClassifier();
       if (!model) return null;
       const thumb = await window.api.getThumb(url);
-      if (!thumb) return null;
+      if (!thumb) { window.__cfWhy = 'cover picture'; return null; }
       const image = new ImageData(new Uint8ClampedArray(thumb.data), thumb.w, thumb.h);
       const predictions = await model.classify(image);
+      window.__cfWhy = '';
       console.log('[cover filter]', window.__nsfwBackend, predictions.map((p) => `${p.className} ${p.probability.toFixed(2)}`).join(', '));
       return window.CoverFilter.shouldBlur(predictions);
     };
@@ -105,7 +106,9 @@ new_classify = '''  async function classifyCover(url) {
     let result = await Promise.race([run(), sleep(nsfwModel ? 7000 : 45000).then(() => 'stalled')]);
     if (result === 'stalled') { // the graphics route froze (screen off): do it on the processor
       window.__nsfwCpu = true;
-      result = await Promise.race([run(), sleep(40000).then(() => null)]);
+      window.__cfWhy = 'graphics stalled';
+      result = await Promise.race([run(), sleep(40000).then(() => 'stalled')]);
+      if (result === 'stalled') window.__cfWhy = 'stalled on graphics and processor';
     }
     return result === 'stalled' ? null : result;
   }

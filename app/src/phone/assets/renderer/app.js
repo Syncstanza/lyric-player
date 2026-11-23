@@ -900,6 +900,7 @@
         return nsfwModel;
       })().catch((err) => {
         console.error('[cover filter]', err);
+        window.__cfWhy = 'load: ' + String((err && err.message) || err).slice(0, 70); // shown on the Cover filter button
         nsfwLoading = null;
         return null;
       });
@@ -918,9 +919,10 @@
       const model = await ensureClassifier();
       if (!model) return null;
       const thumb = await window.api.getThumb(url);
-      if (!thumb) return null;
+      if (!thumb) { window.__cfWhy = 'cover picture'; return null; }
       const image = new ImageData(new Uint8ClampedArray(thumb.data), thumb.w, thumb.h);
       const predictions = await model.classify(image);
+      window.__cfWhy = '';
       console.log('[cover filter]', window.__nsfwBackend, predictions.map((p) => `${p.className} ${p.probability.toFixed(2)}`).join(', '));
       return window.CoverFilter.shouldBlur(predictions);
     };
@@ -929,7 +931,9 @@
     let result = await Promise.race([run(), sleep(nsfwModel ? 7000 : 45000).then(() => 'stalled')]);
     if (result === 'stalled') { // the graphics route froze (screen off): do it on the processor
       window.__nsfwCpu = true;
-      result = await Promise.race([run(), sleep(40000).then(() => null)]);
+      window.__cfWhy = 'graphics stalled';
+      result = await Promise.race([run(), sleep(40000).then(() => 'stalled')]);
+      if (result === 'stalled') window.__cfWhy = 'stalled on graphics and processor';
     }
     return result === 'stalled' ? null : result;
   }
@@ -1017,7 +1021,7 @@
   els.btnAskKeep.addEventListener('click', () => answerCoverAsk(false));
 
   function applyCoverFilterButton() {
-    els.btnCover.textContent = state.coverFilter ? (state.coverFailed ? 'Cover filter: on (not working)' : 'Cover filter: on') : (state.coverAsk ? 'Cover filter: ask me' : 'Cover filter: off');
+    els.btnCover.textContent = state.coverFilter ? (state.coverFailed ? 'Cover filter: on (not working' + (window.__cfWhy ? ' - ' + window.__cfWhy : '') + ')' : 'Cover filter: on') : (state.coverAsk ? 'Cover filter: ask me' : 'Cover filter: off');
   }
   els.btnCover.addEventListener('click', () => {
     // on (checks every cover) -> ask me (nothing is checked; asks once per cover and remembers) -> off
