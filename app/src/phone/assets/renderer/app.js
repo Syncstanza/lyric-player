@@ -94,6 +94,7 @@
     btnAnnShow: $('#btnAnnShow'),
     btnIntro: $('#btnIntro'),
     btnKeys: $('#btnKeys'),
+    btnSound: $('#btnSound'), sound: $('#sound'), soundText: $('#soundText'), soundClose: $('#soundClose'),
     keys: $('#keys'),
     keysList: $('#keysList'),
     keysReset: $('#keysReset'),
@@ -1726,6 +1727,16 @@
   function closeKeys() { captureKey = null; els.keys.hidden = true; }
   els.btnKeys.addEventListener('click', () => { captureKey = null; paintKeys(); els.keys.hidden = false; els.keysClose.focus(); });
   els.keysClose.addEventListener('click', closeKeys);
+  els.btnSound.addEventListener('click', () => {
+    const s = state.snap, A = s && s.audio;
+    els.soundText.textContent = !A ? 'Play a song for a few seconds, then open this again.'
+      : A.error ? 'Could not read: ' + A.error
+      : ['Song position when read: ' + A.at + 's', 'Audio streams (itag type): ' + (A.streams.length ? '\n  ' + A.streams.join('\n  ') : 'none seen'),
+        'Can play: ' + Object.entries(A.support).map(([k, v]) => k + (v ? ' yes' : ' NO')).join(', '),
+        'Network: ' + (A.net ? JSON.stringify(A.net) : 'unknown'), 'Player stats: ' + (A.stats ? JSON.stringify(A.stats) : 'none')].join('\n');
+    els.sound.hidden = false; els.soundClose.focus();
+  });
+  els.soundClose.addEventListener('click', () => { els.sound.hidden = true; });
   els.keysReset.addEventListener('click', () => { state.keys = { ...Shortcuts.DEFAULTS }; captureKey = null; saveKeys(); paintKeys(); });
   els.keysList.addEventListener('click', (e) => {
     const b = e.target.closest('button.keys-key');
