@@ -159,6 +159,12 @@ object Hub {
         ytCtx?.setBaseContext(appCtx)
     }
 
+    /** The phone is short of memory (or the app went out of sight): let go of what can be rebuilt. */
+    fun trim(level: Int) {
+        Art.clear()
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) ui?.evaluateJavascript("window.__lpTrim && window.__lpTrim()", null)
+    }
+
     /** Keeps a page's engine at full priority even when the screen is off, so a play press from the car or a locked phone
      *  is carried out at once instead of waiting until the phone is unlocked. */
     private fun keepAlive(w: WebView) {
@@ -255,6 +261,10 @@ object Hub {
         s.mediaPlaybackRequiresUserGesture = false
         s.allowFileAccess = false
         s.allowContentAccess = false
+        // Nobody sees this page (only its sound and its text are used; the app draws the covers itself), so it does not download or
+        // keep the many pictures of the site (queue, shelves): that saves a lot of memory and data.
+        s.loadsImagesAutomatically = false
+        s.blockNetworkImage = true
         // Ask for the normal computer version of the site: it has the player the app reads from.
         s.userAgentString = s.userAgentString
             .replace(Regex("\\(Linux; Android[^)]*\\)"), "(X11; Linux x86_64)")

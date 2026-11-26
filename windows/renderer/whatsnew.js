@@ -2,6 +2,13 @@
    To announce an update, add an entry at the top with the next id. `desktop: true` items are only shown on Windows and Linux, `mobile: true` items only on the phone and TV. */
 window.__whatsnew = [
   {
+    id: 58,
+    title: 'Lighter on your phone',
+    items: [
+      { text: 'The app now uses less memory while music plays, and frees up more when your phone runs low, so other apps like the camera have room to work.', mobile: true },
+    ],
+  },
+  {
     id: 57,
     title: 'Mini player cover fix',
     items: [

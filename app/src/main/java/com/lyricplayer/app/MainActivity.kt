@@ -139,6 +139,11 @@ class MainActivity : Activity() {
         try { ContextCompat.startForegroundService(this, Intent(this, PlaybackService::class.java)) } catch (_: Exception) { }
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        Hub.trim(level)
+    }
+
     override fun onStop() {
         Hub.visible = false
         super.onStop()

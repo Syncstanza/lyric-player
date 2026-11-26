@@ -884,7 +884,21 @@
   }
 
   // The classifier is about 8 MB, so it is only loaded when the first cover needs checking.
+  // The AI check holds several MB of memory (and graphics memory). Covers are checked in bursts, so it is let go a minute after the
+  // last check (the next new cover loads it again, about a second or two), and at once when the phone says it is short of memory.
+  let nsfwIdleTimer = 0;
+  function freeClassifier() {
+    clearTimeout(nsfwIdleTimer);
+    if (!nsfwModel) return;
+    try { nsfwModel.model.dispose(); } catch (_) { /* ignore */ }
+    try { if (window.tf && window.tf.disposeVariables) window.tf.disposeVariables(); } catch (_) { /* ignore */ }
+    nsfwModel = null;
+    nsfwLoading = null;
+  }
+  window.__lpTrim = () => { freeClassifier(); try { paletteCache && paletteCache.clear && paletteCache.clear(); } catch (_) { /* ignore */ } };
   function ensureClassifier() {
+    clearTimeout(nsfwIdleTimer);
+    nsfwIdleTimer = setTimeout(freeClassifier, 60000);
     if (nsfwModel) return Promise.resolve(nsfwModel);
     if (!nsfwLoading) {
       nsfwLoading = (async () => {

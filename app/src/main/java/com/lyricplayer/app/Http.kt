@@ -42,6 +42,9 @@ object Art {
     }
 
     @Synchronized
+    fun clear() { cache.clear() }
+
+    @Synchronized
     fun bitmap(url: String): android.graphics.Bitmap? {
         cache[url]?.let { return it }
         return try {
